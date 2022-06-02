@@ -8,15 +8,10 @@ repositories {
     mavenCentral()
 }
 
-def lwjglVersion = '3.3.1'
-def lwjglNatives = 'natives-windows'
-
 dependencies {
 
     api "org.lwjgl:lwjgl:$lwjglVersion"
-    api "org.lwjgl:lwjgl:$lwjglVersion:$lwjglNatives"
     api "org.lwjgl:lwjgl-glfw:$lwjglVersion"
-    api "org.lwjgl:lwjgl-glfw:$lwjglVersion:$lwjglNatives"
     api "org.lwjgl:lwjgl-vulkan:$lwjglVersion"
 
     testImplementation 'org.spockframework:spock-core:2.2-M1-groovy-4.0'

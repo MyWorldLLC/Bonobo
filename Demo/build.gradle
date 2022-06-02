@@ -11,6 +11,8 @@ repositories {
 dependencies {
 
     implementation project(':Engine')
+    runtimeOnly "org.lwjgl:lwjgl:$lwjglVersion:$lwjglNatives"
+    runtimeOnly "org.lwjgl:lwjgl-glfw:$lwjglVersion:$lwjglNatives"
 
     testImplementation 'org.spockframework:spock-core:2.2-M1-groovy-4.0'
     testImplementation 'org.apache.groovy:groovy:4.0.2'
