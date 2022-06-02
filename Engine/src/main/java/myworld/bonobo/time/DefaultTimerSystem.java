@@ -1,8 +1,8 @@
 package myworld.bonobo.time;
 
-import myworld.bonobo.core.BaseSystem;
+import myworld.bonobo.core.AppSystem;
 
-public class DefaultTimerSystem extends BaseSystem implements TimerSystem {
+public class DefaultTimerSystem extends AppSystem implements TimerSystem {
 
     protected final Timer timer = new SystemTimer();
 

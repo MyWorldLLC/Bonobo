@@ -1,8 +1,8 @@
 package myworld.bonobo.demo;
 
-import myworld.bonobo.core.BaseSystem;
+import myworld.bonobo.core.AppSystem;
 
-public class HelloSystem extends BaseSystem {
+public class HelloSystem extends AppSystem {
 
     @Override
     public void update(double tpf){

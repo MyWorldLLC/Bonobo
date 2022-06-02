@@ -2,12 +2,12 @@ package myworld.bonobo.core;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class BaseSystem {
+public class AppSystem {
 
     private final AtomicBoolean didInit;
     private final AtomicBoolean isEnabled;
 
-    public BaseSystem(){
+    public AppSystem(){
         didInit = new AtomicBoolean(false);
         isEnabled = new AtomicBoolean(false);
     }

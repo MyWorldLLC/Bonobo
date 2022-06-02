@@ -5,17 +5,17 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 
 public class SystemManager {
-    protected final List<BaseSystem> systems;
+    protected final List<AppSystem> systems;
 
     public SystemManager(){
         systems = new CopyOnWriteArrayList<>();
     }
 
-    public SystemManager register(BaseSystem system){
+    public SystemManager register(AppSystem system){
         return register(system, true);
     }
 
-    public SystemManager register(BaseSystem system, boolean enable){
+    public SystemManager register(AppSystem system, boolean enable){
         if(system.needsInit()){
             system.systemInit();
         }
@@ -26,21 +26,21 @@ public class SystemManager {
         return this;
     }
 
-    public SystemManager registerAll(BaseSystem... systems){
-        for(BaseSystem system : systems){
+    public SystemManager registerAll(AppSystem... systems){
+        for(AppSystem system : systems){
             register(system);
         }
         return this;
     }
 
     public void update(double tpf){
-        for(BaseSystem system : systems){
+        for(AppSystem system : systems){
             system.update(tpf);
         }
     }
 
     protected void stop(){
-        for(BaseSystem system : systems){
+        for(AppSystem system : systems){
             system.stop();
         }
     }
