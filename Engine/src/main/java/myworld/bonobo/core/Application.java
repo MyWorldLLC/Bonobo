@@ -1,5 +1,6 @@
 package myworld.bonobo.core;
 
+import myworld.bonobo.system.DefaultWindowSystem;
 import myworld.bonobo.time.DefaultTimerSystem;
 import myworld.bonobo.time.SleepingTimedLoop;
 import myworld.bonobo.time.TimedLoop;
@@ -30,7 +31,8 @@ public class Application {
 
     private void initializeEngine(){
         systemManager.registerAll(
-                new DefaultTimerSystem()
+                new DefaultTimerSystem(),
+                new DefaultWindowSystem(this)
         );
     }
 
