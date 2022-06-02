@@ -1,0 +1,4 @@
+rootProject.name = 'Bonobo'
+include 'Engine'
+include 'Demo'
+

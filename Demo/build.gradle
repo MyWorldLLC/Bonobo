@@ -1,0 +1,30 @@
+plugins {
+    id 'java'
+    id 'groovy'
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+dependencies {
+
+    implementation project(':Engine')
+
+    testImplementation 'org.spockframework:spock-core:2.2-M1-groovy-4.0'
+    testImplementation 'org.apache.groovy:groovy:4.0.2'
+}
+
+test {
+    useJUnitPlatform()
+}
+
+task runHelloWorld(type: JavaExec, dependsOn: compileJava){
+    javaLauncher = javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(18)
+    }
+
+    classpath = sourceSets.main.runtimeClasspath
+    main 'myworld.bonobo.demo.HelloWorld'
+}
