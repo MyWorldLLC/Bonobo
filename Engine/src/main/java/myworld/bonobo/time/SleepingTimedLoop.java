@@ -6,26 +6,26 @@ import java.util.function.Supplier;
 
 public class SleepingTimedLoop implements TimedLoop {
 
-    protected final Timer timer;
+    protected final Clock clock;
 
-    public SleepingTimedLoop(Timer timer){
-        this.timer = timer;
+    public SleepingTimedLoop(Clock clock){
+        this.clock = clock;
     }
 
     @Override
-    public void run(Supplier<Boolean> exitCondition, TimedRunnable body, long periodMillis) {
+    public void run(Supplier<Boolean> exitCondition, DeltaTimedTask body, long periodMillis) {
         long lastStart = 0;
         long lastEnd = 0;
         long lastElapsed = 0;
         while(!exitCondition.get()){
-            long startTime = timer.currentMillis();
-            body.run(timer, lastStart, lastEnd, lastElapsed);
-            long endTime = timer.currentMillis();
+            long startTime = clock.currentMillis();
+            body.run(clock, lastStart, lastEnd, lastElapsed);
+            long endTime = clock.currentMillis();
 
             long elapsed = endTime - startTime;
             long delta = periodMillis - elapsed;
             if(delta > 0){
-                ThreadUtil.precisionSleep(timer, delta);
+                ThreadUtil.precisionSleep(clock, delta);
             }
 
             lastStart = startTime;

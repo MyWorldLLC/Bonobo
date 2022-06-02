@@ -1,6 +1,6 @@
 package myworld.bonobo.time;
 
-public interface TimedTask {
+public interface PeriodicTimedTask {
 
     void run(double elapsed, double period, double tpf);
 }

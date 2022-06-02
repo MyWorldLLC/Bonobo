@@ -4,10 +4,10 @@ import myworld.bonobo.core.AppSystem;
 
 public class DefaultTimerSystem extends AppSystem implements TimerSystem {
 
-    protected final Timer timer = new SystemTimer();
+    protected final Clock clock = new SystemClock();
 
-    public Timer getTimer(){
-        return timer;
+    public Clock getTimer(){
+        return clock;
     }
 
 }

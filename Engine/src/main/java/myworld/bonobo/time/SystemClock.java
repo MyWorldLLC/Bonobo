@@ -1,6 +1,6 @@
 package myworld.bonobo.time;
 
-public class SystemTimer implements Timer {
+public class SystemClock implements Clock {
 
     protected final double NANOS_TO_MILLIS = 1e-6;
 

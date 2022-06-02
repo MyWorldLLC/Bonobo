@@ -1,19 +1,19 @@
 package myworld.bonobo.util;
 
-import myworld.bonobo.time.Timer;
+import myworld.bonobo.time.Clock;
 
 public class ThreadUtil {
 
-    public static void precisionSleep(Timer timer, long millis){
+    public static void precisionSleep(Clock clock, long millis){
         long elapsed = 0;
-        long lastTime = timer.currentMillis();
+        long lastTime = clock.currentMillis();
         while(elapsed < millis){
             try{
                 Thread.sleep(millis - elapsed);
             }catch(InterruptedException e){
                 Thread.currentThread().interrupt();
             }
-            elapsed = timer.currentMillis() - lastTime;
+            elapsed = clock.currentMillis() - lastTime;
         }
     }
 

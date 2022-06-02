@@ -1,16 +1,16 @@
 package myworld.bonobo.demo;
 
 import myworld.bonobo.core.AppSystem;
-import myworld.bonobo.time.InlineTimer;
+import myworld.bonobo.time.Timer;
 
 public class HelloSystem extends AppSystem {
 
-    protected InlineTimer timer = InlineTimer.create(1, (elapsed, period, tpf) -> {
+    protected Timer timer = Timer.create(1, (elapsed, period, tpf) -> {
         System.out.println("Hello, Bonobo! Tpf is: " + tpf);
     });
 
     @Override
     public void update(double tpf){
-        timer.update(tpf);
+        timer.tick(tpf);
     }
 }

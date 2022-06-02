@@ -42,8 +42,8 @@ public class Application {
 
     private void run(){
         TimedLoop gameLoop = new SleepingTimedLoop(systemManager.getSystem(TimerSystem.class).getTimer());
-        gameLoop.run(stopRequested::get, (timer, lastStart, lastEnd, lastDuration) -> {
-            systemManager.update(TimeUtil.millisToSeconds(timer.currentMillis() - lastStart));
+        gameLoop.run(stopRequested::get, (clock, lastStart, lastEnd, lastDuration) -> {
+            systemManager.update(TimeUtil.millisToSeconds(clock.currentMillis() - lastStart));
         }, TimeUtil.secondsToMillis(1/64.0)); // TODO - configurable update rate
 
         systemManager.stop();
