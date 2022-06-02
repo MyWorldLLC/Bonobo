@@ -14,6 +14,7 @@ public class VulkanRenderSystem extends AppSystem {
         log.log(Level.INFO, "Initializing Vulkan renderer");
         var allocCallbacks = VkAllocationCallbacks.calloc();
         // TODO
+        
     }
 
     @Override

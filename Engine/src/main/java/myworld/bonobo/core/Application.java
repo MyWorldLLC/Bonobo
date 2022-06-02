@@ -2,10 +2,10 @@ package myworld.bonobo.core;
 
 import myworld.bonobo.platform.GlfwWindowSystem;
 import myworld.bonobo.render.VulkanRenderSystem;
-import myworld.bonobo.time.DefaultTimerSystem;
+import myworld.bonobo.time.DefaultClockSystem;
 import myworld.bonobo.time.SleepingTimedLoop;
 import myworld.bonobo.time.TimedLoop;
-import myworld.bonobo.time.TimerSystem;
+import myworld.bonobo.time.ClockSystem;
 import myworld.bonobo.util.TimeUtil;
 
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -32,7 +32,7 @@ public class Application {
 
     private void initializeEngine(){
         systemManager.registerAll(
-                new DefaultTimerSystem(),
+                new DefaultClockSystem(),
                 new GlfwWindowSystem(this),
                 new VulkanRenderSystem()
         );
@@ -41,7 +41,7 @@ public class Application {
     public void initializeApp(){}
 
     private void run(){
-        TimedLoop gameLoop = new SleepingTimedLoop(systemManager.getSystem(TimerSystem.class).getTimer());
+        TimedLoop gameLoop = new SleepingTimedLoop(systemManager.getSystem(ClockSystem.class).getClock());
         gameLoop.run(stopRequested::get, (clock, lastStart, lastEnd, lastDuration) -> {
             systemManager.update(TimeUtil.millisToSeconds(clock.currentMillis() - lastStart));
         }, TimeUtil.secondsToMillis(1/64.0)); // TODO - configurable update rate
