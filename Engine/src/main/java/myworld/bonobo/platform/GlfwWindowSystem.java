@@ -1,4 +1,4 @@
-package myworld.bonobo.system;
+package myworld.bonobo.platform;
 
 import myworld.bonobo.core.AppSystem;
 import myworld.bonobo.core.Application;
@@ -10,17 +10,17 @@ import static java.lang.System.Logger.Level;
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.system.MemoryUtil.NULL;
 
-public class DefaultWindowSystem extends AppSystem {
+public class GlfwWindowSystem extends AppSystem {
 
-    private static final System.Logger log = LogUtil.loggerFor(DefaultWindowSystem.class);
+    private static final System.Logger log = LogUtil.loggerFor(GlfwWindowSystem.class);
 
     protected final Application application;
 
     protected GLFWErrorCallback errorCallback;
 
-    protected long window;
+    protected Window window;
 
-    public DefaultWindowSystem(Application application){
+    public GlfwWindowSystem(Application application){
         this.application = application;
     }
 
@@ -28,7 +28,7 @@ public class DefaultWindowSystem extends AppSystem {
     public void initialize(){
         log.log(Level.INFO, "Running on LWJGL " + Version.getVersion());
 
-        errorCallback = GLFWErrorCallback.createPrint(System.err);
+        errorCallback = GLFWErrorCallback.createPrint(System.err).set();
 
         glfwSetErrorCallback(errorCallback);
         if(!glfwInit()){
@@ -39,8 +39,8 @@ public class DefaultWindowSystem extends AppSystem {
 
         // Don't create an OpenGL context by default
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        window = glfwCreateWindow(640, 480, "Bonobo", NULL, NULL);
-        if (window == NULL) {
+        window = new Window(glfwCreateWindow(640, 480, "Bonobo", NULL, NULL));
+        if (window.getHandle() == NULL) {
             log.log(Level.ERROR, "Failed to create a window, exiting");
             application.stop();
         }
@@ -49,7 +49,7 @@ public class DefaultWindowSystem extends AppSystem {
     @Override
     public void update(double tpf){
         glfwPollEvents();
-        if(glfwWindowShouldClose(window)){
+        if(glfwWindowShouldClose(window.getHandle())){
             log.log(Level.INFO, "Window close requested, exiting");
             application.stop();
         }
@@ -57,7 +57,7 @@ public class DefaultWindowSystem extends AppSystem {
 
     @Override
     public void stop(){
-        glfwDestroyWindow(window);
+        glfwDestroyWindow(window.getHandle());
         glfwTerminate();
     }
 }

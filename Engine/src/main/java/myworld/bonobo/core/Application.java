@@ -1,6 +1,7 @@
 package myworld.bonobo.core;
 
-import myworld.bonobo.system.DefaultWindowSystem;
+import myworld.bonobo.platform.GlfwWindowSystem;
+import myworld.bonobo.render.VulkanRenderSystem;
 import myworld.bonobo.time.DefaultTimerSystem;
 import myworld.bonobo.time.SleepingTimedLoop;
 import myworld.bonobo.time.TimedLoop;
@@ -32,7 +33,8 @@ public class Application {
     private void initializeEngine(){
         systemManager.registerAll(
                 new DefaultTimerSystem(),
-                new DefaultWindowSystem(this)
+                new GlfwWindowSystem(this),
+                new VulkanRenderSystem()
         );
     }
 

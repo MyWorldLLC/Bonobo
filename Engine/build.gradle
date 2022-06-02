@@ -17,6 +17,7 @@ dependencies {
     api "org.lwjgl:lwjgl:$lwjglVersion:$lwjglNatives"
     api "org.lwjgl:lwjgl-glfw:$lwjglVersion"
     api "org.lwjgl:lwjgl-glfw:$lwjglVersion:$lwjglNatives"
+    api "org.lwjgl:lwjgl-vulkan:$lwjglVersion"
 
     testImplementation 'org.spockframework:spock-core:2.2-M1-groovy-4.0'
     testImplementation 'org.apache.groovy:groovy:4.0.2'
