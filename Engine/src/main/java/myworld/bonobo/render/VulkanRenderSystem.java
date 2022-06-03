@@ -28,13 +28,11 @@ public class VulkanRenderSystem extends AppSystem {
     protected final Application app;
     protected final ResourceScope systemScope;
 
-    protected VkInstance vulkan;
-    protected List<VkPhysicalDevice> gpus;
+    protected VulkanInstance vulkan;
 
     public VulkanRenderSystem(Application app){
         this.app = app;
         systemScope = new ResourceScope();
-        gpus = new ArrayList<>();
     }
 
     @Override
@@ -56,7 +54,7 @@ public class VulkanRenderSystem extends AppSystem {
         log.log(Level.INFO, "Initializing Vulkan renderer");
         try(var stack = MemoryStack.stackPush()){
 
-            var requiredExtensions = getRequiredVulkanExtensions();
+            var requiredExtensions = glfwGetRequiredInstanceExtensions();
             if(requiredExtensions == null){
                 throw new VulkanInitException("Could not query required Vulkan extensions, exiting");
             }
@@ -79,7 +77,7 @@ public class VulkanRenderSystem extends AppSystem {
                     .flags(0)
                     .pApplicationInfo(appInfo)
                     .ppEnabledLayerNames(null)
-                    .ppEnabledExtensionNames(null);
+                    .ppEnabledExtensionNames(requiredExtensions);
 
             var instancePtr = MemoryUtil.memCallocPointer(1);
             var result = vkCreateInstance(instanceInfo, null, instancePtr);
@@ -91,12 +89,12 @@ public class VulkanRenderSystem extends AppSystem {
                 throw VulkanInitException.forError(result, "Could not create Vulkan instance");
             }
 
-            vulkan = new VkInstance(instancePtr.get(0), instanceInfo);
+            vulkan = systemScope.add(new VulkanInstance(new VkInstance(instancePtr.get(0), instanceInfo)));
             // TODO
         }
     }
 
-    private static String[] getRequiredVulkanExtensions(){
+    private static String[] getRequiredExtensions(){
         var stringPtrs = glfwGetRequiredInstanceExtensions();
         if(stringPtrs == null){
             return null;
@@ -109,10 +107,11 @@ public class VulkanRenderSystem extends AppSystem {
     }
 
     @Override
-    public void stop(){
-        if(vulkan != null){
-            vkDestroyInstance(vulkan, null);
+    public void stop() {
+        try{
+            systemScope.close();
+        }catch (Exception e){
+            throw new RuntimeException(e);
         }
-        systemScope.free();
     }
 }

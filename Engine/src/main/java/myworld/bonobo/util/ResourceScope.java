@@ -1,32 +1,26 @@
 package myworld.bonobo.util;
 
-import org.lwjgl.system.NativeResource;
-
 import java.util.ArrayList;
 import java.util.List;
 
 public class ResourceScope implements AutoCloseable {
 
-    protected final List<NativeResource> freeables;
+    protected final List<AutoCloseable> closeables;
 
     public ResourceScope(){
-        freeables = new ArrayList<>();
+        closeables = new ArrayList<>();
     }
 
-    public <T extends NativeResource> T add(T freeable){
-        freeables.add(freeable);
+    public <T extends AutoCloseable> T add(T freeable){
+        closeables.add(freeable);
         return freeable;
     }
 
-    public void free(){
-        for(NativeResource resource : freeables){
-            resource.free();
-        }
-        freeables.clear();
-    }
-
     @Override
-    public void close() {
-        free();
+    public void close() throws Exception {
+        for(AutoCloseable resource : closeables){
+            resource.close();
+        }
+        closeables.clear();
     }
 }
