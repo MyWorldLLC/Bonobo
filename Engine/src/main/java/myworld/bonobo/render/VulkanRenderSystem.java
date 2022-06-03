@@ -3,6 +3,7 @@ package myworld.bonobo.render;
 import static java.lang.System.Logger.Level;
 import static org.lwjgl.glfw.GLFW.glfwInit;
 import static org.lwjgl.glfw.GLFWVulkan.*;
+import static org.lwjgl.system.MemoryUtil.NULL;
 import static org.lwjgl.vulkan.VK10.*;
 
 import myworld.bonobo.core.AppSystem;
@@ -65,7 +66,7 @@ public class VulkanRenderSystem extends AppSystem {
 
             var appInfo = VkApplicationInfo.calloc(stack)
                     .sType$Default()
-                    .pNext(0)
+                    .pNext(NULL)
                     .pApplicationName(appName)
                     .applicationVersion(0)
                     .pEngineName(rendererName)
@@ -74,20 +75,20 @@ public class VulkanRenderSystem extends AppSystem {
 
             var instanceInfo = VkInstanceCreateInfo.calloc(stack)
                     .sType$Default()
-                    .pNext(0)
+                    .pNext(NULL)
                     .flags(0)
                     .pApplicationInfo(appInfo)
                     .ppEnabledLayerNames(null)
                     .ppEnabledExtensionNames(null);
 
             var instancePtr = MemoryUtil.memCallocPointer(1);
-            var error = vkCreateInstance(instanceInfo, null, instancePtr);
-            if(error == VK_ERROR_INCOMPATIBLE_DRIVER){
+            var result = vkCreateInstance(instanceInfo, null, instancePtr);
+            if(result == VK_ERROR_INCOMPATIBLE_DRIVER){
                 throw new VulkanInitException("Cannot find a compatible Vulkan installable client driver");
-            }else if(error == VK_ERROR_EXTENSION_NOT_PRESENT){
+            }else if(result == VK_ERROR_EXTENSION_NOT_PRESENT){
                 throw new VulkanInitException("This Vulkan driver does not have all required extensions");
-            }else if(error != 0){
-                throw VulkanInitException.forError(error, "Could not create Vulkan instance");
+            }else if(result != VK_SUCCESS){
+                throw VulkanInitException.forError(result, "Could not create Vulkan instance");
             }
 
             vulkan = new VkInstance(instancePtr.get(0), instanceInfo);
@@ -109,6 +110,9 @@ public class VulkanRenderSystem extends AppSystem {
 
     @Override
     public void stop(){
+        if(vulkan != null){
+            vkDestroyInstance(vulkan, null);
+        }
         systemScope.free();
     }
 }
