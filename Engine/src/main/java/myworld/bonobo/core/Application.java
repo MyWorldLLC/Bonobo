@@ -34,7 +34,7 @@ public class Application {
         systemManager.registerAll(
                 new DefaultClockSystem(),
                 new GlfwWindowSystem(this),
-                new VulkanRenderSystem()
+                new VulkanRenderSystem(this)
         );
     }
 
