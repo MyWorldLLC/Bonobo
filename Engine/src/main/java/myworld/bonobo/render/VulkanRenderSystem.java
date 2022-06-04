@@ -3,21 +3,13 @@ package myworld.bonobo.render;
 import static java.lang.System.Logger.Level;
 import static org.lwjgl.glfw.GLFW.glfwInit;
 import static org.lwjgl.glfw.GLFWVulkan.*;
-import static org.lwjgl.system.MemoryUtil.NULL;
-import static org.lwjgl.vulkan.VK10.*;
 
 import myworld.bonobo.core.AppSystem;
 import myworld.bonobo.core.Application;
 import myworld.bonobo.util.ResourceScope;
 import myworld.bonobo.util.LogUtil;
-import static myworld.bonobo.render.VkErrUtil.check;
 
 import org.lwjgl.system.MemoryStack;
-import org.lwjgl.system.MemoryUtil;
-import org.lwjgl.vulkan.*;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class VulkanRenderSystem extends AppSystem {
 
@@ -28,7 +20,7 @@ public class VulkanRenderSystem extends AppSystem {
     protected final Application app;
     protected final ResourceScope systemScope;
 
-    protected VulkanInstance vulkan;
+    protected VulkanInstance instance;
 
     public VulkanRenderSystem(Application app){
         this.app = app;
@@ -52,58 +44,17 @@ public class VulkanRenderSystem extends AppSystem {
         }
 
         log.log(Level.INFO, "Initializing Vulkan renderer");
+
+        instance = systemScope.add(VulkanInstance.create(ENGINE_NAME, RENDERER_NAME));
         try(var stack = MemoryStack.stackPush()){
 
-            var requiredExtensions = glfwGetRequiredInstanceExtensions();
-            if(requiredExtensions == null){
-                throw new VulkanInitException("Could not query required Vulkan extensions, exiting");
-            }
 
-            var appName = stack.UTF8(ENGINE_NAME);
-            var rendererName = stack.UTF8(RENDERER_NAME);
-
-            var appInfo = VkApplicationInfo.calloc(stack)
-                    .sType$Default()
-                    .pNext(NULL)
-                    .pApplicationName(appName)
-                    .applicationVersion(0)
-                    .pEngineName(rendererName)
-                    .engineVersion(0)
-                    .apiVersion(VK.getInstanceVersionSupported());
-
-            var instanceInfo = VkInstanceCreateInfo.calloc(stack)
-                    .sType$Default()
-                    .pNext(NULL)
-                    .flags(0)
-                    .pApplicationInfo(appInfo)
-                    .ppEnabledLayerNames(null)
-                    .ppEnabledExtensionNames(requiredExtensions);
-
-            var instancePtr = MemoryUtil.memCallocPointer(1);
-            var result = vkCreateInstance(instanceInfo, null, instancePtr);
-            if(result == VK_ERROR_INCOMPATIBLE_DRIVER){
-                throw new VulkanInitException("Cannot find a compatible Vulkan installable client driver");
-            }else if(result == VK_ERROR_EXTENSION_NOT_PRESENT){
-                throw new VulkanInitException("This Vulkan driver does not have all required extensions");
-            }else if(result != VK_SUCCESS){
-                throw VulkanInitException.forError(result, "Could not create Vulkan instance");
-            }
-
-            vulkan = systemScope.add(new VulkanInstance(new VkInstance(instancePtr.get(0), instanceInfo)));
-            // TODO
+           // TODO
         }
     }
 
-    private static String[] getRequiredExtensions(){
-        var stringPtrs = glfwGetRequiredInstanceExtensions();
-        if(stringPtrs == null){
-            return null;
-        }
-        var extensions = new String[stringPtrs.remaining()];
-        for(int i = 0; i < extensions.length; i++){
-            extensions[i] = stringPtrs.getStringASCII(i);
-        }
-        return extensions;
+    public VulkanInstance getInstance(){
+        return instance;
     }
 
     @Override
