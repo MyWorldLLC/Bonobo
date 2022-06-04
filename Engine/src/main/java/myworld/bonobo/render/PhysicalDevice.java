@@ -33,11 +33,10 @@ public class PhysicalDevice implements AutoCloseable {
         return device;
     }
 
-    public Set<String> getDeviceExtensions(){
+    public Set<String> getExtensions(){
         if(deviceExtensions.isEmpty()){
             try(var stack = MemoryStack.stackPush()){
                 var count = stack.callocInt(1);
-                // Fetch the property count
                 check(vkEnumerateDeviceExtensionProperties(device, (String)null, count, null));
 
                 var deviceExtensions = VkExtensionProperties.calloc(count.get(0), stack);
@@ -52,7 +51,7 @@ public class PhysicalDevice implements AutoCloseable {
     }
 
     public boolean hasExtension(String extension){
-        return getDeviceExtensions().contains(extension);
+        return getExtensions().contains(extension);
     }
 
     public VkPhysicalDeviceProperties getProperties(){

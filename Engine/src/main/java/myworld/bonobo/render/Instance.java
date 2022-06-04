@@ -44,7 +44,7 @@ public class Instance implements AutoCloseable {
                 var gpuCount = count.get(0);
                 var deviceHandles = stack.callocPointer(gpuCount);
                 check(vkEnumeratePhysicalDevices(instance, count, deviceHandles));
-                for(int i = 0; i < count.get(0); i++){
+                for(int i = 0; i < gpuCount; i++){
                     gpus.add(new PhysicalDevice(this, new VkPhysicalDevice(deviceHandles.get(i), instance)));
                 }
             }

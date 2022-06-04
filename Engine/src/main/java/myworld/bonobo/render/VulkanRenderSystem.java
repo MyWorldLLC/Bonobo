@@ -3,6 +3,7 @@ package myworld.bonobo.render;
 import static java.lang.System.Logger.Level;
 import static org.lwjgl.glfw.GLFW.glfwInit;
 import static org.lwjgl.glfw.GLFWVulkan.*;
+import static org.lwjgl.vulkan.KHRSwapchain.VK_KHR_SWAPCHAIN_EXTENSION_NAME;
 
 import myworld.bonobo.core.AppSystem;
 import myworld.bonobo.core.Application;
@@ -48,7 +49,9 @@ public class VulkanRenderSystem extends AppSystem {
         instance = systemScope.add(Instance.create(ENGINE_NAME, RENDERER_NAME));
         try(var stack = MemoryStack.stackPush()){
             instance.getGpus().forEach(gpu -> {
-
+                gpu.getProperties();
+                log.log(Level.INFO, gpu.getProperties().deviceNameString());
+                log.log(Level.INFO, gpu.hasExtension(VK_KHR_SWAPCHAIN_EXTENSION_NAME));
             });
 
 
