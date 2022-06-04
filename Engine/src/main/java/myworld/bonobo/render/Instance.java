@@ -1,6 +1,6 @@
 package myworld.bonobo.render;
 
-import myworld.bonobo.util.LogUtil;
+import myworld.bonobo.util.log.Logger;
 import static java.lang.System.Logger.Level;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
@@ -16,7 +16,7 @@ import static org.lwjgl.vulkan.VK10.VK_SUCCESS;
 
 public class Instance implements AutoCloseable {
 
-    private static final System.Logger log = LogUtil.loggerFor(Instance.class);
+    private static final Logger log = Logger.loggerFor(Instance.class);
     protected VkInstance instance;
     protected Set<String> requiredExtensions;
     protected List<PhysicalDevice> gpus;
@@ -39,6 +39,7 @@ public class Instance implements AutoCloseable {
 
             var count = stack.callocInt(1);
             check(vkEnumeratePhysicalDevices(instance, count, null));
+            log.debug("System reports %d devices", count.get(0));
 
             if(count.get(0) > 0){
                 var gpuCount = count.get(0);

@@ -2,7 +2,7 @@ package myworld.bonobo.platform;
 
 import myworld.bonobo.core.AppSystem;
 import myworld.bonobo.core.Application;
-import myworld.bonobo.util.LogUtil;
+import myworld.bonobo.util.log.Logger;
 import org.lwjgl.Version;
 import org.lwjgl.glfw.GLFWErrorCallback;
 
@@ -15,7 +15,7 @@ import static org.lwjgl.system.MemoryUtil.NULL;
 
 public class GlfwWindowSystem extends AppSystem {
 
-    private static final System.Logger log = LogUtil.loggerFor(GlfwWindowSystem.class);
+    private static final Logger log = Logger.loggerFor(GlfwWindowSystem.class);
 
     protected final Application application;
 
@@ -30,20 +30,20 @@ public class GlfwWindowSystem extends AppSystem {
 
     @Override
     public void initialize(){
-        log.log(Level.INFO, "Running on LWJGL " + Version.getVersion());
+        log.info("Running on LWJGL " + Version.getVersion());
 
         errorCallback = GLFWErrorCallback.createPrint(System.err).set();
 
         glfwSetErrorCallback(errorCallback);
         if(!glfwInit()){
-            log.log(Level.ERROR, "Could not initialize GLFW, exiting");
+            log.error( "Could not initialize GLFW, exiting");
             application.stop();
         }
         log.log(Level.INFO, "Initialized GLFW successfully");
 
         var window = createWindow("Bonobo", 640, 480);
         if (window == null) {
-            log.log(Level.ERROR, "Failed to create a window, exiting");
+            log.error( "Failed to create a window, exiting");
             application.stop();
         }
 
@@ -54,7 +54,7 @@ public class GlfwWindowSystem extends AppSystem {
         glfwPollEvents();
         windows.removeIf(this::closeIfRequested);
         if(windows.isEmpty()){
-            log.log(Level.INFO, "All windows closed, exiting");
+            log.info("All windows closed, exiting");
             application.stop();
         }
     }

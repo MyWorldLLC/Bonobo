@@ -8,7 +8,7 @@ import static org.lwjgl.vulkan.KHRSwapchain.VK_KHR_SWAPCHAIN_EXTENSION_NAME;
 import myworld.bonobo.core.AppSystem;
 import myworld.bonobo.core.Application;
 import myworld.bonobo.util.ResourceScope;
-import myworld.bonobo.util.LogUtil;
+import myworld.bonobo.util.log.Logger;
 
 import org.lwjgl.system.MemoryStack;
 
@@ -17,7 +17,7 @@ public class VulkanRenderSystem extends AppSystem {
     public static final String ENGINE_NAME = "Bonobo";
     public static final String RENDERER_NAME = "Bonobo VK";
 
-    private static final System.Logger log = LogUtil.loggerFor(VulkanRenderSystem.class);
+    private static final Logger log = Logger.loggerFor(VulkanRenderSystem.class);
     protected final Application app;
     protected final ResourceScope systemScope;
 
@@ -35,23 +35,23 @@ public class VulkanRenderSystem extends AppSystem {
         // GLFW allows multiple init calls, and subsequent calls (following a successful init)
         // have no effect.
         if(!glfwInit()){
-            log.log(Level.INFO, "Could not initialize GLFW, exiting");
+            log.error("Could not initialize GLFW, exiting");
             app.stop();
         }
 
         if(!glfwVulkanSupported()){
-            log.log(Level.INFO, "Vulkan is not supported on this device, exiting");
+            log.error("Vulkan is not supported on this device, exiting");
             app.stop();
         }
 
-        log.log(Level.INFO, "Initializing Vulkan renderer");
+        log.info("Initializing Vulkan renderer");
 
         instance = systemScope.add(Instance.create(ENGINE_NAME, RENDERER_NAME));
         try(var stack = MemoryStack.stackPush()){
             instance.getGpus().forEach(gpu -> {
                 gpu.getProperties();
-                log.log(Level.INFO, gpu.getProperties().deviceNameString());
-                log.log(Level.INFO, gpu.hasExtension(VK_KHR_SWAPCHAIN_EXTENSION_NAME));
+                log.info(gpu.getProperties().deviceNameString());
+                log.info("Supports swapchain? %s", gpu.hasExtension(VK_KHR_SWAPCHAIN_EXTENSION_NAME));
             });
 
 
