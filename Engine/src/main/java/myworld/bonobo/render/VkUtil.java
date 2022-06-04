@@ -3,6 +3,8 @@ package myworld.bonobo.render;
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.system.MemoryStack;
 
+import java.util.Collection;
+
 public class VkUtil {
 
     public static String[] fromASCII(PointerBuffer strArray){
@@ -20,6 +22,18 @@ public class VkUtil {
             buf.put(i, ascii);
         }
         return buf;
+    }
+
+    public static void closeAll(AutoCloseable... closeables) throws Exception {
+        for(var closeable : closeables){
+            closeable.close();
+        }
+    }
+
+    public static void closeAll(Collection<? extends AutoCloseable> closeables) throws Exception {
+        for(var closeable : closeables){
+            closeable.close();
+        }
     }
 
 }

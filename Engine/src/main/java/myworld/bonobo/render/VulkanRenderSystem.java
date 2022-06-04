@@ -20,7 +20,7 @@ public class VulkanRenderSystem extends AppSystem {
     protected final Application app;
     protected final ResourceScope systemScope;
 
-    protected VulkanInstance instance;
+    protected Instance instance;
 
     public VulkanRenderSystem(Application app){
         this.app = app;
@@ -45,15 +45,18 @@ public class VulkanRenderSystem extends AppSystem {
 
         log.log(Level.INFO, "Initializing Vulkan renderer");
 
-        instance = systemScope.add(VulkanInstance.create(ENGINE_NAME, RENDERER_NAME));
+        instance = systemScope.add(Instance.create(ENGINE_NAME, RENDERER_NAME));
         try(var stack = MemoryStack.stackPush()){
+            instance.getGpus().forEach(gpu -> {
+
+            });
 
 
            // TODO
         }
     }
 
-    public VulkanInstance getInstance(){
+    public Instance getInstance(){
         return instance;
     }
 

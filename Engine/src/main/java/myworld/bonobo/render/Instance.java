@@ -14,14 +14,14 @@ import static org.lwjgl.system.MemoryUtil.NULL;
 import static org.lwjgl.vulkan.VK10.*;
 import static org.lwjgl.vulkan.VK10.VK_SUCCESS;
 
-public class VulkanInstance implements AutoCloseable {
+public class Instance implements AutoCloseable {
 
-    private static final System.Logger log = LogUtil.loggerFor(VulkanInstance.class);
+    private static final System.Logger log = LogUtil.loggerFor(Instance.class);
     protected VkInstance instance;
     protected Set<String> requiredExtensions;
-    protected List<VkPhysicalDevice> gpus;
+    protected List<PhysicalDevice> gpus;
 
-    public VulkanInstance(VkInstance instance){
+    public Instance(VkInstance instance){
         this.instance = instance;
         requiredExtensions = new HashSet<>();
         gpus = new ArrayList<>();
@@ -31,7 +31,7 @@ public class VulkanInstance implements AutoCloseable {
         return instance;
     }
 
-    public List<VkPhysicalDevice> getGpus(){
+    public List<PhysicalDevice> getGpus(){
         if(gpus.size() > 0){
             return gpus;
         }
@@ -45,24 +45,25 @@ public class VulkanInstance implements AutoCloseable {
                 var deviceHandles = stack.callocPointer(gpuCount);
                 check(vkEnumeratePhysicalDevices(instance, count, deviceHandles));
                 for(int i = 0; i < count.get(0); i++){
-                    gpus.add(new VkPhysicalDevice(deviceHandles.get(i), instance));
+                    gpus.add(new PhysicalDevice(this, new VkPhysicalDevice(deviceHandles.get(i), instance)));
                 }
             }
         }
-        return gpus;
+        return new ArrayList<>(gpus);
     }
 
 
 
     @Override
-    public void close() {
+    public void close() throws Exception {
         if(instance != null){
             vkDestroyInstance(instance, null);
             instance = null;
         }
+        VkUtil.closeAll(gpus);
     }
 
-    public static VulkanInstance create(String engine, String renderer) {
+    public static Instance create(String engine, String renderer) {
         log.log(Level.INFO, "Creating Vulkan instance");
         try (var stack = MemoryStack.stackPush()) {
 
@@ -103,7 +104,7 @@ public class VulkanInstance implements AutoCloseable {
 
             log.log(Level.INFO, "Successfully created Vulkan instance");
 
-            var instance = new VulkanInstance(new VkInstance(instancePtr.get(0), instanceInfo));
+            var instance = new Instance(new VkInstance(instancePtr.get(0), instanceInfo));
             instance.requiredExtensions.addAll(Arrays.asList(VkUtil.fromASCII(requiredExtensions)));
             return instance;
         }
