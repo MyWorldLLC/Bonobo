@@ -6,8 +6,7 @@ import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
 import org.lwjgl.vulkan.*;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 import static myworld.bonobo.render.VkErrUtil.check;
 import static org.lwjgl.glfw.GLFWVulkan.glfwGetRequiredInstanceExtensions;
@@ -19,10 +18,12 @@ public class VulkanInstance implements AutoCloseable {
 
     private static final System.Logger log = LogUtil.loggerFor(VulkanInstance.class);
     protected VkInstance instance;
+    protected Set<String> requiredExtensions;
     protected List<VkPhysicalDevice> gpus;
 
     public VulkanInstance(VkInstance instance){
         this.instance = instance;
+        requiredExtensions = new HashSet<>();
         gpus = new ArrayList<>();
     }
 
@@ -50,6 +51,8 @@ public class VulkanInstance implements AutoCloseable {
         }
         return gpus;
     }
+
+
 
     @Override
     public void close() {
@@ -100,8 +103,9 @@ public class VulkanInstance implements AutoCloseable {
 
             log.log(Level.INFO, "Successfully created Vulkan instance");
 
-            return new VulkanInstance(new VkInstance(instancePtr.get(0), instanceInfo));
-
+            var instance = new VulkanInstance(new VkInstance(instancePtr.get(0), instanceInfo));
+            instance.requiredExtensions.addAll(Arrays.asList(VkUtil.fromASCII(requiredExtensions)));
+            return instance;
         }
     }
 }
