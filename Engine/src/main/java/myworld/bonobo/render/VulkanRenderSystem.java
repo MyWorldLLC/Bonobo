@@ -1,6 +1,5 @@
 package myworld.bonobo.render;
 
-import static java.lang.System.Logger.Level;
 import static org.lwjgl.glfw.GLFW.glfwInit;
 import static org.lwjgl.glfw.GLFWVulkan.*;
 import static org.lwjgl.vulkan.KHRSwapchain.VK_KHR_SWAPCHAIN_EXTENSION_NAME;
@@ -53,7 +52,6 @@ public class VulkanRenderSystem extends AppSystem {
                 log.info(gpu.getProperties().deviceNameString());
                 log.info("Supports swapchain? %s", gpu.hasExtension(VK_KHR_SWAPCHAIN_EXTENSION_NAME));
             });
-
 
            // TODO
         }

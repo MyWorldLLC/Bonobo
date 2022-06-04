@@ -5,7 +5,7 @@ import org.lwjgl.vulkan.*;
 
 import java.util.*;
 
-import static myworld.bonobo.render.VkErrUtil.check;
+import static myworld.bonobo.render.VkUtil.check;
 import static org.lwjgl.vulkan.VK10.*;
 
 public class PhysicalDevice implements AutoCloseable {
