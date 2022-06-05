@@ -16,15 +16,33 @@
 
 package myworld.bonobo.platform;
 
+import java.util.concurrent.atomic.AtomicLong;
+
 public class Window {
 
+    protected final int id;
     protected final long handle;
+    protected final AtomicLong surfaceHandle;
 
-    protected Window(long handle){
+    protected Window(int id, long handle){
+        this.id = id;
         this.handle = handle;
+        surfaceHandle = new AtomicLong();
     }
 
-    protected long getHandle(){
+    public int getId(){
+        return id;
+    }
+
+    public void setSurfaceHandle(long surfaceHandle){
+        this.surfaceHandle.set(surfaceHandle);
+    }
+
+    public long getSurfaceHandle(){
+        return surfaceHandle.get();
+    }
+
+    public long getHandle(){
         return handle;
     }
 

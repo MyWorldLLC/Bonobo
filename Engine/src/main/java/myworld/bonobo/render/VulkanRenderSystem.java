@@ -16,19 +16,24 @@
 
 package myworld.bonobo.render;
 
+import static myworld.bonobo.render.VkUtil.firstMatch;
 import static org.lwjgl.glfw.GLFW.glfwInit;
 import static org.lwjgl.glfw.GLFWVulkan.*;
+import static org.lwjgl.vulkan.KHRSurface.vkDestroySurfaceKHR;
 import static org.lwjgl.vulkan.VK10.*;
-import static org.lwjgl.vulkan.KHRSwapchain.VK_KHR_SWAPCHAIN_EXTENSION_NAME;
 
 import myworld.bonobo.core.AppSystem;
 import myworld.bonobo.core.Application;
+import myworld.bonobo.platform.GlfwWindowSystem;
+import myworld.bonobo.platform.Window;
 import myworld.bonobo.util.ResourceScope;
 import myworld.bonobo.util.log.Logger;
 
 import org.lwjgl.system.MemoryStack;
 
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.List;
 
 public class VulkanRenderSystem extends AppSystem {
 
@@ -37,14 +42,15 @@ public class VulkanRenderSystem extends AppSystem {
 
     private static final Logger log = Logger.loggerFor(VulkanRenderSystem.class);
     protected final Application app;
-    protected final ResourceScope systemScope;
 
     protected Instance instance;
-    protected RenderingDevice device;
+    protected PhysicalDevice gpu;
+
+    protected final List<Surface> surfaces;
 
     public VulkanRenderSystem(Application app){
         this.app = app;
-        systemScope = new ResourceScope();
+        surfaces = new ArrayList<>();
     }
 
     @Override
@@ -65,34 +71,57 @@ public class VulkanRenderSystem extends AppSystem {
 
         log.info("Initializing Vulkan renderer");
 
-        instance = systemScope.add(Instance.create(ENGINE_NAME, RENDERER_NAME));
+        instance = Instance.create(ENGINE_NAME, RENDERER_NAME);
+
+        // Use only an integrated or discrete gpu, and prefer discrete gpus to integrated
+        // TODO - we need a much more intelligent way to choose the device, and it needs
+        // to be able to be overridden via configuration
+        var gpus = instance.getGpus().stream()
+                .filter(d -> {
+                    int type = d.getProperties().deviceType();
+                    return type == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU
+                            || type == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
+                }).sorted(
+                        Comparator.comparingInt((PhysicalDevice d) -> d.getProperties().deviceType())
+                                .reversed())
+                .toList();
+
+        gpus.forEach(gpu -> {
+            gpu.getProperties();
+            log.info("Found GPU: %s", gpu.getProperties().deviceNameString());
+        });
+
+        if (gpus.isEmpty()) {
+            log.error("No suitable GPU was found on this system, exiting");
+            app.stop();
+        }
+
+        gpu = gpus.get(0);
+
+        createWindowSurface(app.getSystem(GlfwWindowSystem.class)
+                .getWindow(GlfwWindowSystem.FIRST_WINDOW_ID));
+
+    }
+
+    public void createWindowSurface(Window window){
         try(var stack = MemoryStack.stackPush()){
-            // Use only an integrated or discrete gpu, and prefer discrete gpus to integrated
-            // TODO - we need a much more intelligent way to choose the device, and it needs
-            // to be able to be overridden via configuration
-            var gpus = instance.getGpus().stream()
-                    .filter(d -> {
-                        int type = d.getProperties().deviceType();
-                        return type == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU
-                                || type == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
-                    }).sorted(
-                            Comparator.comparingInt((PhysicalDevice d) -> d.getProperties().deviceType())
-                                    .reversed())
-                    .toList();
 
-            gpus.forEach(gpu -> {
-                gpu.getProperties();
-                log.info("Found GPU: %s", gpu.getProperties().deviceNameString());
-            });
+            var surfaceHandle = stack.callocLong(1);
+            glfwCreateWindowSurface(instance.getInstance(), window.getHandle(), null, surfaceHandle);
+            window.setSurfaceHandle(surfaceHandle.get(0));
 
-            if(gpus.isEmpty()){
-                log.error("No suitable GPU was found on this system, exiting");
-                app.stop();
+            var queueFamilyIndex = firstMatch(
+                    gpu.getQueueFamilyPresentationSupport(surfaceHandle.get(0)),
+                    gpu.getQueueFamilySupport(VK_QUEUE_GRAPHICS_BIT),
+                    true);
+
+            if(queueFamilyIndex == -1){
+                throw new VulkanException("Cannot find a GPU that supports both graphics & presentation");
             }
 
-            var gpu = gpus.get(0);
-            device = RenderingDevice.create(gpu, 0); // TODO - select queue family
-
+            var device = RenderingDevice.create(gpu, queueFamilyIndex);
+            var surface = new Surface(surfaceHandle.get(0), window, gpu, device, queueFamilyIndex);
+            surfaces.add(surface);
 
         }
     }
@@ -104,7 +133,11 @@ public class VulkanRenderSystem extends AppSystem {
     @Override
     public void stop() {
         try{
-            systemScope.close();
+            // Note: surfaces must be closed before the instance is closed
+            surfaces.forEach(s -> {
+                vkDestroySurfaceKHR(instance.getInstance(), s.getHandle(), null);
+            });
+            instance.close();
         }catch (Exception e){
             throw new RuntimeException(e);
         }

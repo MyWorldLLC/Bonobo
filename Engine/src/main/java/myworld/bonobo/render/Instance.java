@@ -73,11 +73,11 @@ public class Instance implements AutoCloseable {
 
     @Override
     public void close() throws Exception {
+        VkUtil.closeAll(gpus);
         if(instance != null){
             vkDestroyInstance(instance, null);
             instance = null;
         }
-        VkUtil.closeAll(gpus);
     }
 
     public static Instance create(String engine, String renderer) {
@@ -86,7 +86,7 @@ public class Instance implements AutoCloseable {
 
             var requiredExtensions = glfwGetRequiredInstanceExtensions();
             if (requiredExtensions == null) {
-                throw new VulkanInitException("Could not query required Vulkan extensions");
+                throw new VulkanException("Could not query required Vulkan extensions");
             }
 
             var appName = stack.UTF8(engine);
@@ -112,11 +112,11 @@ public class Instance implements AutoCloseable {
             var instancePtr = MemoryUtil.memCallocPointer(1);
             var result = vkCreateInstance(instanceInfo, null, instancePtr);
             if (result == VK_ERROR_INCOMPATIBLE_DRIVER) {
-                throw new VulkanInitException("Cannot find a compatible Vulkan installable client driver");
+                throw new VulkanException("Cannot find a compatible Vulkan installable client driver");
             } else if (result == VK_ERROR_EXTENSION_NOT_PRESENT) {
-                throw new VulkanInitException("This Vulkan driver does not have all required extensions");
+                throw new VulkanException("This Vulkan driver does not have all required extensions");
             } else if (result != VK_SUCCESS) {
-                throw VulkanInitException.forError(result, "Could not create Vulkan instance");
+                throw VulkanException.forError(result, "Could not create Vulkan instance");
             }
 
             log.log(Level.INFO, "Successfully created Vulkan instance");

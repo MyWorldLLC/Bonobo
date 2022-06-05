@@ -17,23 +17,31 @@
 package myworld.bonobo.render;
 
 import org.lwjgl.system.MemoryStack;
-import org.lwjgl.vulkan.VkDevice;
-import org.lwjgl.vulkan.VkDeviceCreateInfo;
-import org.lwjgl.vulkan.VkDeviceQueueCreateInfo;
-import org.lwjgl.vulkan.VkPhysicalDeviceFeatures;
+import org.lwjgl.vulkan.*;
 
 import static myworld.bonobo.render.VkUtil.check;
 import static org.lwjgl.vulkan.VK10.vkCreateDevice;
+import static org.lwjgl.vulkan.VK10.vkGetDeviceQueue;
 
 public class RenderingDevice implements AutoCloseable {
 
     protected final VkDevice device;
+
+    protected VkQueue queue;
+
     public RenderingDevice(VkDevice device){
         this.device = device;
     }
 
     public VkDevice getDevice(){
         return device;
+    }
+
+    public VkQueue getQueue(){
+        if(queue == null){
+            vkGetDeviceQueue(device, 0, 0, null);
+        }
+        return queue;
     }
 
     public static RenderingDevice create(PhysicalDevice gpu, int queueFamilyIndex){

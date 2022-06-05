@@ -23,24 +23,31 @@ import org.lwjgl.Version;
 import org.lwjgl.glfw.GLFWErrorCallback;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.lang.System.Logger.Level;
 import static org.lwjgl.glfw.GLFW.*;
+import static org.lwjgl.glfw.GLFWVulkan.glfwCreateWindowSurface;
 import static org.lwjgl.system.MemoryUtil.NULL;
 
 public class GlfwWindowSystem extends AppSystem {
+
+    public static final int FIRST_WINDOW_ID = 1;
 
     private static final Logger log = Logger.loggerFor(GlfwWindowSystem.class);
 
     protected final Application application;
 
     protected GLFWErrorCallback errorCallback;
+    protected final AtomicInteger windowIds;
 
     protected final List<Window> windows;
 
     public GlfwWindowSystem(Application application){
         this.application = application;
+        windowIds = new AtomicInteger(FIRST_WINDOW_ID);
         windows = new ArrayList<>();
     }
 
@@ -82,16 +89,27 @@ public class GlfwWindowSystem extends AppSystem {
         glfwTerminate();
     }
 
-    protected Window createWindow(String title, int width, int height){
+    public Window createWindow(String title, int width, int height){
         // Don't create an OpenGL context by default
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
         var handle = glfwCreateWindow(width, height, title, NULL, NULL);
         if(handle == NULL){
             return null;
         }
-        var window = new Window(handle);
+        var window = new Window(windowIds.getAndIncrement(), handle);
         windows.add(window);
         return window;
+    }
+
+    public List<Window> getWindows(){
+        return Collections.unmodifiableList(windows);
+    }
+
+    public Window getWindow(int windowId){
+        return windows.stream()
+                .filter(w -> w.getId() == windowId)
+                .findFirst()
+                .get();
     }
 
     protected boolean closeIfRequested(Window window){

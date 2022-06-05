@@ -56,15 +56,24 @@ public class VkUtil {
         }
     }
 
-    public static void check(int errCode) throws VulkanInitException {
+    public static void check(int errCode) throws VulkanException {
         if(errCode != 0){
-            throw VulkanInitException.forError(errCode);
+            throw VulkanException.forError(errCode);
         }
     }
 
-    public static void check(int errCode, String msg) throws VulkanInitException {
+    public static void check(int errCode, String msg) throws VulkanException {
         if(errCode != 0){
-            throw VulkanInitException.forError(errCode, msg);
+            throw VulkanException.forError(errCode, msg);
         }
+    }
+
+    public static int firstMatch(boolean[] a, boolean[] b, boolean value){
+        for(int i = 0; i < Math.min(a.length, b.length); i++){
+            if(a[i] == b[i] == value){
+                return i;
+            }
+        }
+        return -1;
     }
 }

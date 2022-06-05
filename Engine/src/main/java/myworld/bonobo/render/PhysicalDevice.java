@@ -22,6 +22,7 @@ import org.lwjgl.vulkan.*;
 import java.util.*;
 
 import static myworld.bonobo.render.VkUtil.check;
+import static org.lwjgl.vulkan.KHRSurface.vkGetPhysicalDeviceSurfaceSupportKHR;
 import static org.lwjgl.vulkan.VK10.*;
 
 public class PhysicalDevice implements AutoCloseable {
@@ -34,6 +35,8 @@ public class PhysicalDevice implements AutoCloseable {
 
     protected VkQueueFamilyProperties.Buffer queueFamilyProperties;
     protected VkPhysicalDeviceFeatures features;
+
+    protected VkPhysicalDeviceMemoryProperties memoryProperties;
 
     public PhysicalDevice(Instance instance, VkPhysicalDevice device){
         this.instance = instance;
@@ -100,6 +103,35 @@ public class PhysicalDevice implements AutoCloseable {
         return features;
     }
 
+    public boolean[] getQueueFamilyPresentationSupport(long surface){
+        try(var stack = MemoryStack.stackPush()){
+            var supportFlag = stack.callocInt(1);
+            boolean[] supports = new boolean[getQueueFamilyProperties().capacity()];
+            for(int i = 0; i < supports.length; i++){
+                check(vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, supportFlag));
+                supports[i] = supportFlag.get(0) == VK_TRUE;
+            }
+            return supports;
+        }
+    }
+
+    public boolean[] getQueueFamilySupport(int flags){
+        var props = getQueueFamilyProperties();
+        boolean[] supports = new boolean[props.capacity()];
+        for (int i = 0; i < supports.length; i++) {
+            supports[i] = (props.get(i).queueFlags() & flags) != 0;
+        }
+        return supports;
+    }
+
+    public VkPhysicalDeviceMemoryProperties getMemoryProperties(){
+        if(memoryProperties == null){
+            memoryProperties = VkPhysicalDeviceMemoryProperties.calloc();
+            vkGetPhysicalDeviceMemoryProperties(device, memoryProperties);
+        }
+        return memoryProperties;
+    }
+
     @Override
     public void close(){
         if(properties != null){
@@ -110,6 +142,9 @@ public class PhysicalDevice implements AutoCloseable {
         }
         if(features != null){
             features.free();
+        }
+        if(memoryProperties != null){
+            memoryProperties.free();
         }
     }
 }
