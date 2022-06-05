@@ -76,4 +76,8 @@ public class Application {
     public SystemManager getSystemManager(){
         return systemManager;
     }
+
+    public <T> T getSystem(Class<T> systemCls){
+        return systemManager.getSystem(systemCls);
+    }
 }
