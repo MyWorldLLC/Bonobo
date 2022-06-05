@@ -2,6 +2,7 @@ package myworld.bonobo.render;
 
 import static org.lwjgl.glfw.GLFW.glfwInit;
 import static org.lwjgl.glfw.GLFWVulkan.*;
+import static org.lwjgl.vulkan.VK10.*;
 import static org.lwjgl.vulkan.KHRSwapchain.VK_KHR_SWAPCHAIN_EXTENSION_NAME;
 
 import myworld.bonobo.core.AppSystem;
@@ -10,6 +11,8 @@ import myworld.bonobo.util.ResourceScope;
 import myworld.bonobo.util.log.Logger;
 
 import org.lwjgl.system.MemoryStack;
+
+import java.util.Comparator;
 
 public class VulkanRenderSystem extends AppSystem {
 
@@ -21,6 +24,7 @@ public class VulkanRenderSystem extends AppSystem {
     protected final ResourceScope systemScope;
 
     protected Instance instance;
+    protected RenderingDevice device;
 
     public VulkanRenderSystem(Application app){
         this.app = app;
@@ -47,13 +51,33 @@ public class VulkanRenderSystem extends AppSystem {
 
         instance = systemScope.add(Instance.create(ENGINE_NAME, RENDERER_NAME));
         try(var stack = MemoryStack.stackPush()){
-            instance.getGpus().forEach(gpu -> {
+            // Use only an integrated or discrete gpu, and prefer discrete gpus to integrated
+            // TODO - we need a much more intelligent way to choose the device, and it needs
+            // to be able to be overridden via configuration
+            var gpus = instance.getGpus().stream()
+                    .filter(d -> {
+                        int type = d.getProperties().deviceType();
+                        return type == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU
+                                || type == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
+                    }).sorted(
+                            Comparator.comparingInt((PhysicalDevice d) -> d.getProperties().deviceType())
+                                    .reversed())
+                    .toList();
+
+            gpus.forEach(gpu -> {
                 gpu.getProperties();
-                log.info(gpu.getProperties().deviceNameString());
-                log.info("Supports swapchain? %s", gpu.hasExtension(VK_KHR_SWAPCHAIN_EXTENSION_NAME));
+                log.info("Found GPU: %s", gpu.getProperties().deviceNameString());
             });
 
-           // TODO
+            if(gpus.isEmpty()){
+                log.error("No suitable GPU was found on this system, exiting");
+                app.stop();
+            }
+
+            var gpu = gpus.get(0);
+            device = RenderingDevice.create(gpu, 0); // TODO - select queue family
+
+
         }
     }
 

@@ -24,6 +24,10 @@ public class VkUtil {
         return buf;
     }
 
+    public static PointerBuffer toAscii(MemoryStack stack, Collection<String> strings){
+        return toAscii(stack, strings.toArray(new String[]{}));
+    }
+
     public static void closeAll(AutoCloseable... closeables) throws Exception {
         for(var closeable : closeables){
             closeable.close();
