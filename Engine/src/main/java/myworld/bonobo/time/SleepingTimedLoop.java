@@ -30,8 +30,8 @@ public class SleepingTimedLoop implements TimedLoop {
 
     @Override
     public void run(Supplier<Boolean> exitCondition, DeltaTimedTask body, long periodMillis) {
-        long lastStart = 0;
-        long lastEnd = 0;
+        long lastStart = clock.currentMillis();
+        long lastEnd = clock.currentMillis();
         long lastElapsed = 0;
         while(!exitCondition.get()){
             long startTime = clock.currentMillis();
