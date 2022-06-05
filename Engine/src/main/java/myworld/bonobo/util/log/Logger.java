@@ -20,6 +20,21 @@ import static java.lang.System.Logger.Level;
 
 public class Logger {
 
+    public static final void init(){
+        String pkgFilter = Logger.class.getPackageName();
+        String prop = System.getProperty("jdk.logger.packages");
+        if(prop != null){
+            if(prop.endsWith(",")){
+                prop = prop + pkgFilter;
+            }else{
+                prop = prop + "," + pkgFilter;
+            }
+        }else{
+            prop = pkgFilter;
+        }
+        System.setProperty("jdk.logger.packages", prop);
+    }
+
     protected final System.Logger log;
 
     private Logger(System.Logger log){

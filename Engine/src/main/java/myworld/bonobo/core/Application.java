@@ -23,6 +23,7 @@ import myworld.bonobo.time.SleepingTimedLoop;
 import myworld.bonobo.time.TimedLoop;
 import myworld.bonobo.time.ClockSystem;
 import myworld.bonobo.util.TimeUtil;
+import myworld.bonobo.util.log.Logger;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -47,6 +48,7 @@ public class Application {
     }
 
     private void initializeEngine(){
+        Logger.init();
         systemManager.registerAll(
                 new DefaultClockSystem(),
                 new GlfwWindowSystem(this),
