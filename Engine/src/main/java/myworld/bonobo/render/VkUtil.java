@@ -18,6 +18,7 @@ package myworld.bonobo.render;
 
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.system.MemoryStack;
+import org.lwjgl.system.NativeResource;
 
 import java.util.Collection;
 
@@ -46,13 +47,25 @@ public class VkUtil {
 
     public static void closeAll(AutoCloseable... closeables) throws Exception {
         for(var closeable : closeables){
-            closeable.close();
+            if(closeable != null){
+                closeable.close();
+            }
         }
     }
 
     public static void closeAll(Collection<? extends AutoCloseable> closeables) throws Exception {
         for(var closeable : closeables){
-            closeable.close();
+            if(closeable != null){
+                closeable.close();
+            }
+        }
+    }
+
+    public static void freeAll(NativeResource... resources){
+        for(var resource : resources){
+            if(resource != null){
+                resource.free();
+            }
         }
     }
 
@@ -75,5 +88,14 @@ public class VkUtil {
             }
         }
         return -1;
+    }
+
+    public static boolean contains(int value, int[] options){
+        for(var i : options){
+            if(value == i){
+                return true;
+            }
+        }
+        return false;
     }
 }

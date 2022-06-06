@@ -121,9 +121,23 @@ public class VulkanRenderSystem extends AppSystem {
 
             var device = RenderingDevice.create(gpu, queueFamilyIndex);
             var surface = new Surface(surfaceHandle.get(0), window, gpu, device, queueFamilyIndex);
+            surface.createSwapChain();
+
             surfaces.add(surface);
 
         }
+    }
+
+    public void destroySurface(long handle){
+        var surface = surfaces.stream()
+                .filter(s -> s.getHandle() == handle)
+                .findFirst();
+
+        if(surface.isPresent()){
+            vkDestroySurfaceKHR(instance.getInstance(), surface.get().getHandle(), null);
+            surface.get().close();
+        }
+        surfaces.removeIf(s -> s.getHandle() == handle);
     }
 
     public Instance getInstance(){

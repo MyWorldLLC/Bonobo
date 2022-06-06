@@ -18,6 +18,8 @@ package myworld.bonobo.platform;
 
 import java.util.concurrent.atomic.AtomicLong;
 
+import static org.lwjgl.vulkan.VK10.VK_NULL_HANDLE;
+
 public class Window {
 
     protected final int id;
@@ -27,7 +29,7 @@ public class Window {
     protected Window(int id, long handle){
         this.id = id;
         this.handle = handle;
-        surfaceHandle = new AtomicLong();
+        surfaceHandle = new AtomicLong(VK_NULL_HANDLE);
     }
 
     public int getId(){
@@ -36,6 +38,10 @@ public class Window {
 
     public void setSurfaceHandle(long surfaceHandle){
         this.surfaceHandle.set(surfaceHandle);
+    }
+
+    public boolean hasSurface(){
+        return getSurfaceHandle() != VK_NULL_HANDLE;
     }
 
     public long getSurfaceHandle(){

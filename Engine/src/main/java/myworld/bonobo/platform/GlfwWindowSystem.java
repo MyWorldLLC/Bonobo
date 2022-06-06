@@ -18,6 +18,7 @@ package myworld.bonobo.platform;
 
 import myworld.bonobo.core.AppSystem;
 import myworld.bonobo.core.Application;
+import myworld.bonobo.render.VulkanRenderSystem;
 import myworld.bonobo.util.log.Logger;
 import org.lwjgl.Version;
 import org.lwjgl.glfw.GLFWErrorCallback;
@@ -114,6 +115,9 @@ public class GlfwWindowSystem extends AppSystem {
 
     protected boolean closeIfRequested(Window window){
         if(glfwWindowShouldClose(window.getHandle())){
+            if(window.hasSurface()){
+                application.getSystem(VulkanRenderSystem.class).destroySurface(window.getSurfaceHandle());
+            }
             glfwDestroyWindow(window.getHandle());
             return true;
         }
