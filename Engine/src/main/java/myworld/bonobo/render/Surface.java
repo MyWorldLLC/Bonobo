@@ -28,8 +28,7 @@ import static myworld.bonobo.render.VkUtil.check;
 import static myworld.bonobo.render.VkUtil.firstMatch;
 import static org.lwjgl.glfw.GLFW.glfwGetFramebufferSize;
 import static org.lwjgl.vulkan.KHRSurface.*;
-import static org.lwjgl.vulkan.KHRSwapchain.vkCreateSwapchainKHR;
-import static org.lwjgl.vulkan.KHRSwapchain.vkDestroySwapchainKHR;
+import static org.lwjgl.vulkan.KHRSwapchain.*;
 import static org.lwjgl.vulkan.VK10.*;
 
 public class Surface implements AutoCloseable {
@@ -51,6 +50,11 @@ public class Surface implements AutoCloseable {
     protected int[] presentModes;
 
     protected long swapchainHandle;
+
+    protected long[] swapchainImages;
+    protected long[] swapchainImageViews;
+
+    protected int swapchainImageFormat;
 
     public Surface(long handle, Window window, PhysicalDevice gpu, RenderingDevice device, int queueFamilyIndex){
         this.handle = handle;
@@ -170,13 +174,15 @@ public class Surface implements AutoCloseable {
         long oldSwapchain = swapchainHandle;
 
         try(var stack = MemoryStack.stackPush()){
+            int surfaceFormat = getSupportedSurfaceFormats().format(); // TODO - should choose preferred surface
+            int surfaceColorSpace = getSupportedSurfaceFormats().colorSpace(); // TODO - as above
             var createInfo = VkSwapchainCreateInfoKHR.calloc(stack)
                     .sType$Default()
                     .pNext(0)
                     .surface(handle)
                     .minImageCount(imageCount)
-                    .imageFormat(getSupportedSurfaceFormats().format()) // TODO - should choose preferred surface
-                    .imageColorSpace(getSupportedSurfaceFormats().colorSpace()) // TODO - as above
+                    .imageFormat(surfaceFormat)
+                    .imageColorSpace(surfaceColorSpace)
                     .imageExtent(getSwapExtents())
                     .imageArrayLayers(1)
                     .imageUsage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) // TODO - this may not be the final usage. It will probably become transfer_dst when postprocessing is supported
@@ -193,11 +199,53 @@ public class Surface implements AutoCloseable {
             var pSwapchainHandle = stack.callocLong(1);
             check(vkCreateSwapchainKHR(device.getDevice(), createInfo, null, pSwapchainHandle));
             swapchainHandle = pSwapchainHandle.get(0);
+
+            var createdImageCount = stack.callocInt(1);
+            check(vkGetSwapchainImagesKHR(device.getDevice(), swapchainHandle, createdImageCount, null));
+
+            var images = stack.callocLong(createdImageCount.get(0));
+            check(vkGetSwapchainImagesKHR(device.getDevice(), swapchainHandle, createdImageCount, images));
+
+            swapchainImages = new long[createdImageCount.get(0)];
+            for(int i = 0; i < swapchainImages.length; i++){
+                swapchainImages[i] = images.get(i);
+            }
+            swapchainImageFormat = surfaceFormat;
+
+            swapchainImageViews = new long[swapchainImages.length];
+            for(int i = 0; i < swapchainImageViews.length; i++){
+                var imageViewCreateInfo = VkImageViewCreateInfo.calloc(stack)
+                        .sType$Default()
+                        .pNext(0)
+                        .image(swapchainImages[i])
+                        .viewType(VK_IMAGE_VIEW_TYPE_2D)
+                        .format(surfaceFormat)
+                        .components(c -> c.r(VK_COMPONENT_SWIZZLE_IDENTITY)
+                                .b(VK_COMPONENT_SWIZZLE_IDENTITY)
+                                .g(VK_COMPONENT_SWIZZLE_IDENTITY)
+                                .a(VK_COMPONENT_SWIZZLE_IDENTITY)
+                        )
+                        .subresourceRange(r -> r.aspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
+                                .baseMipLevel(0)
+                                .levelCount(1)
+                                .baseArrayLayer(0)
+                                .layerCount(1)
+                        );
+
+                var pImageView = stack.callocLong(1);
+                check(vkCreateImageView(device.getDevice(), imageViewCreateInfo, null, pImageView));
+
+                swapchainImageViews[i] = pImageView.get(0);
+            }
         }
     }
 
     @Override
     public void close(){
+
+        for(int i = 0; i < swapchainImageViews.length; i++){
+            vkDestroyImageView(device.getDevice(), swapchainImageViews[i], null);
+        }
 
         if(swapchainHandle != VK_NULL_HANDLE){
             vkDestroySwapchainKHR(device.getDevice(), swapchainHandle, null);
