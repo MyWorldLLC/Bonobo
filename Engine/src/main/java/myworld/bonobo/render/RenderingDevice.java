@@ -20,8 +20,7 @@ import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.*;
 
 import static myworld.bonobo.render.VkUtil.check;
-import static org.lwjgl.vulkan.VK10.vkCreateDevice;
-import static org.lwjgl.vulkan.VK10.vkGetDeviceQueue;
+import static org.lwjgl.vulkan.VK10.*;
 
 public class RenderingDevice implements AutoCloseable {
 
@@ -74,5 +73,7 @@ public class RenderingDevice implements AutoCloseable {
     }
 
     @Override
-    public void close(){}
+    public void close(){
+        vkDestroyDevice(device, null);
+    }
 }

@@ -129,13 +129,16 @@ public class VulkanRenderSystem extends AppSystem {
     }
 
     public void destroySurface(long handle){
-        var surface = surfaces.stream()
+        var maybeSurface = surfaces.stream()
                 .filter(s -> s.getHandle() == handle)
                 .findFirst();
 
-        if(surface.isPresent()){
-            vkDestroySurfaceKHR(instance.getInstance(), surface.get().getHandle(), null);
-            surface.get().close();
+        if(maybeSurface.isPresent()){
+            var surface = maybeSurface.get();
+            surface.close();
+            // Surface does not close its own device, as in the future devices may be shared between surfaces
+            surface.getDevice().close();
+            vkDestroySurfaceKHR(instance.getInstance(), maybeSurface.get().getHandle(), null);
         }
         surfaces.removeIf(s -> s.getHandle() == handle);
     }

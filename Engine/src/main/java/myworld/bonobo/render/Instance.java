@@ -18,6 +18,8 @@ package myworld.bonobo.render;
 
 import myworld.bonobo.util.log.Logger;
 import static java.lang.System.Logger.Level;
+
+import org.lwjgl.PointerBuffer;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
 import org.lwjgl.vulkan.*;
@@ -79,7 +81,6 @@ public class Instance implements AutoCloseable {
             instance = null;
         }
     }
-
     public static Instance create(String engine, String renderer) {
         log.log(Level.INFO, "Creating Vulkan instance");
         try (var stack = MemoryStack.stackPush()) {
@@ -87,6 +88,24 @@ public class Instance implements AutoCloseable {
             var requiredExtensions = glfwGetRequiredInstanceExtensions();
             if (requiredExtensions == null) {
                 throw new VulkanException("Could not query required Vulkan extensions");
+            }
+
+            PointerBuffer enabledLayers = null;
+            // TODO - only do this for debug configuration
+            var availableLayerCount = stack.callocInt(1);
+            vkEnumerateInstanceLayerProperties(availableLayerCount, null);
+            var availableLayers = VkLayerProperties.calloc(availableLayerCount.get(0), stack);
+            vkEnumerateInstanceLayerProperties(availableLayerCount, availableLayers);
+
+            log.info("%d validation layers available", availableLayerCount.get(0));
+
+            for(int i = 0; i < availableLayerCount.get(0); i++){
+                log.info("Available validation layer: %s", availableLayers.get(i).layerNameString());
+                if(availableLayers.get(i).layerNameString().equals("VK_LAYER_KHRONOS_validation")){
+                    enabledLayers = stack.callocPointer(1);
+                    enabledLayers.put(0, stack.ASCII("VK_LAYER_KHRONOS_validation"));
+                    log.info("Enabling validation layers");
+                }
             }
 
             var appName = stack.UTF8(engine);
@@ -106,7 +125,7 @@ public class Instance implements AutoCloseable {
                     .pNext(NULL)
                     .flags(0)
                     .pApplicationInfo(appInfo)
-                    .ppEnabledLayerNames(null)
+                    .ppEnabledLayerNames(enabledLayers)
                     .ppEnabledExtensionNames(requiredExtensions);
 
             var instancePtr = MemoryUtil.memCallocPointer(1);

@@ -85,9 +85,9 @@ public class GlfwWindowSystem extends AppSystem {
 
     @Override
     public void stop(){
-        windows.forEach(window -> glfwDestroyWindow(window.getHandle()));
+        windows.forEach(this::closeWindow);
         windows.clear();
-        glfwTerminate();
+        //glfwTerminate();
     }
 
     public Window createWindow(String title, int width, int height){
@@ -115,12 +115,16 @@ public class GlfwWindowSystem extends AppSystem {
 
     protected boolean closeIfRequested(Window window){
         if(glfwWindowShouldClose(window.getHandle())){
-            if(window.hasSurface()){
-                application.getSystem(VulkanRenderSystem.class).destroySurface(window.getSurfaceHandle());
-            }
-            glfwDestroyWindow(window.getHandle());
+            closeWindow(window);
             return true;
         }
         return false;
+    }
+
+    protected void closeWindow(Window window){
+        if(window.hasSurface()){
+            application.getSystem(VulkanRenderSystem.class).destroySurface(window.getSurfaceHandle());
+        }
+        glfwDestroyWindow(window.getHandle());
     }
 }
