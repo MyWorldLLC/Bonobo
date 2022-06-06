@@ -97,14 +97,19 @@ public class Instance implements AutoCloseable {
             var availableLayers = VkLayerProperties.calloc(availableLayerCount.get(0), stack);
             vkEnumerateInstanceLayerProperties(availableLayerCount, availableLayers);
 
-            log.info("%d validation layers available", availableLayerCount.get(0));
+            log.info("%d layers available", availableLayerCount.get(0));
 
             for(int i = 0; i < availableLayerCount.get(0); i++){
-                log.info("Available validation layer: %s", availableLayers.get(i).layerNameString());
                 if(availableLayers.get(i).layerNameString().equals("VK_LAYER_KHRONOS_validation")){
                     enabledLayers = stack.callocPointer(1);
                     enabledLayers.put(0, stack.ASCII("VK_LAYER_KHRONOS_validation"));
-                    log.info("Enabling validation layers");
+                    log.info("Enabling validation layer %s", "VK_LAYER_KHRONOS_validation");
+                    break;
+                }else if(availableLayers.get(i).layerNameString().equals("VK_LAYER_LUNARG_standard_validation")){
+                    enabledLayers = stack.callocPointer(1);
+                    enabledLayers.put(0, stack.ASCII("VK_LAYER_LUNARG_standard_validation"));
+                    log.info("Enabling validation layer %s", "VK_LAYER_LUNARG_standard_validation");
+                    break;
                 }
             }
 
