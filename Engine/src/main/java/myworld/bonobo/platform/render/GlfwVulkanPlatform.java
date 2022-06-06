@@ -14,53 +14,79 @@
  *    limitations under the License.
  */
 
-package myworld.bonobo.render;
+package myworld.bonobo.platform.render;
 
-import static myworld.bonobo.render.VkUtil.firstMatch;
-import static org.lwjgl.glfw.GLFW.glfwInit;
+import static myworld.bonobo.platform.render.VkUtil.firstMatch;
+import static org.lwjgl.glfw.GLFW.*;
+import static org.lwjgl.glfw.GLFW.GLFW_NO_API;
 import static org.lwjgl.glfw.GLFWVulkan.*;
+import static org.lwjgl.system.MemoryUtil.NULL;
 import static org.lwjgl.vulkan.KHRSurface.vkDestroySurfaceKHR;
 import static org.lwjgl.vulkan.VK10.*;
 
 import myworld.bonobo.core.AppSystem;
 import myworld.bonobo.core.Application;
-import myworld.bonobo.platform.GlfwWindowSystem;
-import myworld.bonobo.platform.Window;
-import myworld.bonobo.util.ResourceScope;
+import myworld.bonobo.platform.PlatformSystem;
+import myworld.bonobo.platform.windowing.Window;
+import myworld.bonobo.platform.windowing.WindowFeatures;
+import myworld.bonobo.platform.windowing.WindowManager;
 import myworld.bonobo.util.log.Logger;
 
+import org.lwjgl.Version;
+import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.system.MemoryStack;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-public class VulkanRenderSystem extends AppSystem {
+public class GlfwVulkanPlatform extends AppSystem implements PlatformSystem {
 
     public static final String ENGINE_NAME = "Bonobo";
     public static final String RENDERER_NAME = "Bonobo VK";
 
-    private static final Logger log = Logger.loggerFor(VulkanRenderSystem.class);
+    private static final Logger log = Logger.loggerFor(GlfwVulkanPlatform.class);
     protected final Application app;
+    protected GLFWErrorCallback errorCallback;
+    protected final WindowManager<VulkanWindow> windows;
 
     protected Instance instance;
     protected PhysicalDevice gpu;
 
     protected final List<Surface> surfaces;
 
-    public VulkanRenderSystem(Application app){
+    public GlfwVulkanPlatform(Application app){
         this.app = app;
+        windows = new WindowManager<>(this::createWindow);
         surfaces = new ArrayList<>();
+    }
+
+    protected VulkanWindow createWindow(int id, WindowFeatures features){
+        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+        glfwWindowHint(GLFW_VISIBLE, features.startVisible() ? GLFW_TRUE : GLFW_FALSE);
+        var handle = glfwCreateWindow(features.width(), features.height(), features.title(), NULL, NULL);
+        if(handle == NULL){
+            return null;
+        }
+        return new VulkanWindow(id, handle);
     }
 
     @Override
     public void initialize(){
+        log.info("Running on LWJGL " + Version.getVersion());
 
-        // If used with the default windowing implementation, this will already have happened.
-        // GLFW allows multiple init calls, and subsequent calls (following a successful init)
-        // have no effect.
+        errorCallback = GLFWErrorCallback.createPrint(System.err).set();
+
+        glfwSetErrorCallback(errorCallback);
         if(!glfwInit()){
-            log.error("Could not initialize GLFW, exiting");
+            log.error( "Could not initialize GLFW, exiting");
+            app.stop();
+        }
+        log.log(System.Logger.Level.INFO, "Initialized GLFW successfully");
+
+        var window = windows.createWindow(new WindowFeatures("Bonobo", 640, 480, false));
+        if (window == null) {
+            log.error( "Failed to create a window, exiting");
             app.stop();
         }
 
@@ -98,8 +124,8 @@ public class VulkanRenderSystem extends AppSystem {
 
         gpu = gpus.get(0);
 
-        createWindowSurface(app.getSystem(GlfwWindowSystem.class)
-                .getWindow(GlfwWindowSystem.FIRST_WINDOW_ID));
+        createWindowSurface(window);
+        window.setVisible(true);
 
     }
 
@@ -148,6 +174,16 @@ public class VulkanRenderSystem extends AppSystem {
     }
 
     @Override
+    public void update(double tpf){
+        glfwPollEvents();
+        windows.getWindows().removeIf(this::closeIfRequested);
+        if(windows.getWindows().isEmpty()){
+            log.info("All windows closed, exiting");
+            app.stop();
+        }
+    }
+
+    @Override
     public void stop() {
         try{
             // Note: surfaces must be closed before the instance is closed
@@ -158,5 +194,26 @@ public class VulkanRenderSystem extends AppSystem {
         }catch (Exception e){
             throw new RuntimeException(e);
         }
+        glfwTerminate();
+    }
+
+    protected boolean closeIfRequested(VulkanWindow window){
+        if(glfwWindowShouldClose(window.getHandle())){
+            closeWindow(window);
+            return true;
+        }
+        return false;
+    }
+
+    protected void closeWindow(VulkanWindow window){
+        if(window.hasSurface()){
+            destroySurface(window.getSurfaceHandle());
+        }
+        glfwDestroyWindow(window.getHandle());
+    }
+
+    @Override
+    public WindowManager<VulkanWindow> getWindowManager() {
+        return windows;
     }
 }

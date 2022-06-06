@@ -16,8 +16,7 @@
 
 package myworld.bonobo.core;
 
-import myworld.bonobo.platform.GlfwWindowSystem;
-import myworld.bonobo.render.VulkanRenderSystem;
+import myworld.bonobo.platform.render.GlfwVulkanPlatform;
 import myworld.bonobo.time.DefaultClockSystem;
 import myworld.bonobo.time.SleepingTimedLoop;
 import myworld.bonobo.time.TimedLoop;
@@ -38,8 +37,13 @@ public class Application {
     }
 
     public void start(){
-        initialize();
-        run();
+        try{
+            initialize();
+            run();
+        }catch (ApplicationStoppingException e){
+            stopRequested.set(true);
+            systemManager.stop();
+        }
     }
 
     private void initialize(){
@@ -51,8 +55,7 @@ public class Application {
         Logger.init();
         systemManager.registerAll(
                 new DefaultClockSystem(),
-                new GlfwWindowSystem(this),
-                new VulkanRenderSystem(this)
+                new GlfwVulkanPlatform(this)
         );
     }
 
@@ -71,8 +74,9 @@ public class Application {
         return stopRequested.get();
     }
 
-    public void stop(){
+    public void stop() throws ApplicationStoppingException {
         stopRequested.set(true);
+        throw new ApplicationStoppingException();
     }
 
     public SystemManager getSystemManager(){

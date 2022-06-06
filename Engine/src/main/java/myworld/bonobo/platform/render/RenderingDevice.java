@@ -14,12 +14,12 @@
  *    limitations under the License.
  */
 
-package myworld.bonobo.render;
+package myworld.bonobo.platform.render;
 
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.*;
 
-import static myworld.bonobo.render.VkUtil.check;
+import static myworld.bonobo.platform.render.VkUtil.check;
 import static org.lwjgl.vulkan.VK10.*;
 
 public class RenderingDevice implements AutoCloseable {

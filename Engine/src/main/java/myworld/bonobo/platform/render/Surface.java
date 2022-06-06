@@ -14,18 +14,15 @@
  *    limitations under the License.
  */
 
-package myworld.bonobo.render;
+package myworld.bonobo.platform.render;
 
 import myworld.bonobo.math.BMath;
-import myworld.bonobo.platform.Window;
+import myworld.bonobo.platform.windowing.Window;
 import org.lwjgl.system.MemoryStack;
-import org.lwjgl.system.MemoryUtil;
 import org.lwjgl.vulkan.*;
 
-import java.nio.IntBuffer;
-
-import static myworld.bonobo.render.VkUtil.check;
-import static myworld.bonobo.render.VkUtil.firstMatch;
+import static myworld.bonobo.platform.render.VkUtil.check;
+import static myworld.bonobo.platform.render.VkUtil.firstMatch;
 import static org.lwjgl.glfw.GLFW.glfwGetFramebufferSize;
 import static org.lwjgl.vulkan.KHRSurface.*;
 import static org.lwjgl.vulkan.KHRSwapchain.*;

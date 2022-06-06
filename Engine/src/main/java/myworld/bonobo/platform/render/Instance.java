@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package myworld.bonobo.render;
+package myworld.bonobo.platform.render;
 
 import myworld.bonobo.util.log.Logger;
 import static java.lang.System.Logger.Level;
@@ -26,7 +26,7 @@ import org.lwjgl.vulkan.*;
 
 import java.util.*;
 
-import static myworld.bonobo.render.VkUtil.check;
+import static myworld.bonobo.platform.render.VkUtil.check;
 import static org.lwjgl.glfw.GLFWVulkan.glfwGetRequiredInstanceExtensions;
 import static org.lwjgl.system.MemoryUtil.NULL;
 import static org.lwjgl.vulkan.VK10.*;

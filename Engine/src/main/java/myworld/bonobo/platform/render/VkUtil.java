@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package myworld.bonobo.render;
+package myworld.bonobo.platform.render;
 
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.system.MemoryStack;

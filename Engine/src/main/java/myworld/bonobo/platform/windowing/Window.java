@@ -14,13 +14,13 @@
  *    limitations under the License.
  */
 
-package myworld.bonobo.platform;
+package myworld.bonobo.platform.windowing;
 
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.lwjgl.vulkan.VK10.VK_NULL_HANDLE;
 
-public class Window {
+public abstract class Window {
 
     protected final int id;
     protected final long handle;
@@ -51,5 +51,7 @@ public class Window {
     public long getHandle(){
         return handle;
     }
+
+    public abstract void setVisible(boolean visible);
 
 }
