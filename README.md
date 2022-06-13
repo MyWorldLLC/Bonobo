@@ -16,6 +16,11 @@ human-friendly after them seemed a natural choice.
 ## Current State
 Bonobo is in *very* early stages and is nowhere near close for real use of any sort. Have a good idea for a game engine? Fork Bonobo and make a pull request!
 
+## System Requirements
+You'll need a system with a Vulkan-capable GPU (either integrated or discrete) and
+appropriate drivers installed. If Bonobo does not find a Vulkan-capable GPU it will
+exit with `SEVERE: No suitable GPU was found on this system, exiting`.
+
 ## Contributing
 As above, please, by all means, fork the engine and make a pull request if you have a good, indifferent, or even lousy idea for a game engine! It's an experiment, after
 all! As things progress we'll keep what we love, refactor what we don't, and discard whatever just doesn't fit well.
