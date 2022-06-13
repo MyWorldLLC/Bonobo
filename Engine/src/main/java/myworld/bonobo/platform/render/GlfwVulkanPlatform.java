@@ -103,17 +103,11 @@ public class GlfwVulkanPlatform extends AppSystem implements PlatformSystem {
 
         instance = Instance.create(ENGINE_NAME, RENDERER_NAME);
 
-        // Use only an integrated or discrete gpu, and prefer discrete gpus to integrated
-        // TODO - we need a much more intelligent way to choose the device, and it needs
-        // to be able to be overridden via configuration
+        // Sort by physical device type.
+        // TODO - need to support overriding this via configuration
         var gpus = instance.getGpus().stream()
-                .filter(d -> {
-                    int type = d.getProperties().deviceType();
-                    return type == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU
-                            || type == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
-                }).sorted(
-                        Comparator.comparingInt((PhysicalDevice d) -> d.getProperties().deviceType())
-                                .reversed())
+                .sorted(
+                        Comparator.comparingInt((PhysicalDevice d) -> deviceSortKey(d.getProperties().deviceType())))
                 .toList();
 
         gpus.forEach(gpu -> {
@@ -127,6 +121,7 @@ public class GlfwVulkanPlatform extends AppSystem implements PlatformSystem {
         }
 
         gpu = gpus.get(0);
+        log.info("Using GPU: %s", gpu.getProperties().deviceNameString());
 
         createWindowSurface(window);
         window.setVisible(true);
@@ -219,5 +214,23 @@ public class GlfwVulkanPlatform extends AppSystem implements PlatformSystem {
     @Override
     public WindowManager<VulkanWindow> getWindowManager() {
         return windows;
+    }
+
+    protected static int deviceSortKey(int deviceType){
+        var deviceTypes = new int[]{
+                VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU,
+                VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU,
+                VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU,
+                VK_PHYSICAL_DEVICE_TYPE_CPU,
+                VK_PHYSICAL_DEVICE_TYPE_OTHER
+        };
+
+        for(int i = 0; i < deviceTypes.length; i++){
+            if(deviceTypes[i] == deviceType){
+                return i;
+            }
+        }
+
+        return Integer.MAX_VALUE;
     }
 }
