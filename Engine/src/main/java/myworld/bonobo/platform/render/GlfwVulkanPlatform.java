@@ -63,7 +63,8 @@ public class GlfwVulkanPlatform extends AppSystem implements PlatformSystem {
 
     protected VulkanWindow createWindow(int id, WindowFeatures features){
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        glfwWindowHint(GLFW_VISIBLE, features.startVisible() ? GLFW_TRUE : GLFW_FALSE);
+        glfwWindowHint(GLFW_VISIBLE, features.state().startVisible() ? GLFW_TRUE : GLFW_FALSE);
+        glfwWindowHint(GLFW_DECORATED, features.state().borderless() ? GLFW_FALSE : GLFW_TRUE);
         var handle = glfwCreateWindow(features.width(), features.height(), features.title(), NULL, NULL);
         if(handle == NULL){
             return null;
@@ -84,7 +85,10 @@ public class GlfwVulkanPlatform extends AppSystem implements PlatformSystem {
         }
         log.log(System.Logger.Level.INFO, "Initialized GLFW successfully");
 
-        var window = windows.createWindow(new WindowFeatures("Bonobo", 640, 480, false));
+        var window = windows.createWindow(new WindowFeatures(
+                "Bonobo",
+                640, 480,
+                new WindowFeatures.DisplayState(false, false)));
         if (window == null) {
             log.error( "Failed to create a window, exiting");
             app.stop();
