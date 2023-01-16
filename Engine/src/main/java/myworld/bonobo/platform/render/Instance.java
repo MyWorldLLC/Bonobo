@@ -71,8 +71,6 @@ public class Instance implements AutoCloseable {
         return new ArrayList<>(gpus);
     }
 
-
-
     @Override
     public void close() throws Exception {
         VkUtil.closeAll(gpus);

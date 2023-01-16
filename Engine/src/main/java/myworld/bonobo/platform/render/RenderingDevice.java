@@ -19,6 +19,8 @@ package myworld.bonobo.platform.render;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.*;
 
+import java.util.List;
+
 import static myworld.bonobo.platform.render.VkUtil.check;
 import static org.lwjgl.vulkan.VK10.*;
 
@@ -62,8 +64,13 @@ public class RenderingDevice implements AutoCloseable {
                     .pNext(0)
                     .flags(0)
                     .pQueueCreateInfos(queueCreateInfo)
-                    .ppEnabledLayerNames(null)
-                    .ppEnabledExtensionNames(VkUtil.toAscii(stack, gpu.getExtensions()))
+                    //.ppEnabledLayerNames(null)
+                    //.ppEnabledExtensionNames(VkUtil.toAscii(stack, gpu.getExtensions()))
+                    // TODO - this needs to be configurable. Right now just enable the swapchain extension,
+                    // because it's always present on a VK instance that's capable of displaying a window.
+                    // The problem with enabling all extensions is that they may have dependencies on instance
+                    // extensions that are not enabled.
+                    .ppEnabledExtensionNames(VkUtil.toAscii(stack, List.of("VK_KHR_swapchain")))
                     .pEnabledFeatures(deviceFeatures);
 
             var handlePtr = stack.callocPointer(1);
