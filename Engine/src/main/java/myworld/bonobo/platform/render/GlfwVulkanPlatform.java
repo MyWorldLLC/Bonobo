@@ -34,6 +34,7 @@ import myworld.bonobo.util.log.Logger;
 
 import org.lwjgl.Version;
 import org.lwjgl.glfw.GLFWErrorCallback;
+import org.lwjgl.glfw.GLFWWindowSizeCallback;
 import org.lwjgl.system.MemoryStack;
 
 import java.util.ArrayList;
@@ -49,6 +50,7 @@ public class GlfwVulkanPlatform extends AppSystem implements PlatformSystem {
     protected final Application app;
     protected GLFWErrorCallback errorCallback;
     protected final WindowManager<VulkanWindow> windows;
+    protected GLFWWindowSizeCallback sizeCallback;
 
     protected Instance instance;
     protected PhysicalDevice gpu;
@@ -72,13 +74,18 @@ public class GlfwVulkanPlatform extends AppSystem implements PlatformSystem {
     }
 
     protected VulkanWindow createVKWindow(int id, WindowFeatures features){
+
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
         glfwWindowHint(GLFW_VISIBLE, features.state().startVisible() ? GLFW_TRUE : GLFW_FALSE);
         glfwWindowHint(GLFW_DECORATED, features.state().borderless() ? GLFW_FALSE : GLFW_TRUE);
+
         var handle = glfwCreateWindow(features.width(), features.height(), features.title(), NULL, NULL);
         if(handle == NULL){
             return null;
         }
+
+        glfwSetWindowSizeCallback(handle, sizeCallback);
+
         return new VulkanWindow(id, handle);
     }
 
@@ -87,6 +94,7 @@ public class GlfwVulkanPlatform extends AppSystem implements PlatformSystem {
         log.info("Running on LWJGL " + Version.getVersion());
 
         errorCallback = GLFWErrorCallback.createPrint(System.err).set();
+        sizeCallback = GLFWWindowSizeCallback.create(this::onResize);
 
         glfwSetErrorCallback(errorCallback);
         if(!glfwInit()){
@@ -126,7 +134,7 @@ public class GlfwVulkanPlatform extends AppSystem implements PlatformSystem {
 
     }
 
-    public void createWindowSurface(Window window){
+    public void createWindowSurface(VulkanWindow window){
         try(var stack = MemoryStack.stackPush()){
 
             var surfaceHandle = stack.callocLong(1);
@@ -230,5 +238,19 @@ public class GlfwVulkanPlatform extends AppSystem implements PlatformSystem {
         }
 
         return Integer.MAX_VALUE;
+    }
+
+    protected void onResize(long windowHandle, int width, int height){
+        var window = windows.getWindows()
+                .stream()
+                .filter(w -> w.getHandle() == windowHandle)
+                .findFirst();
+
+        if(window.isEmpty()){
+            return;
+        }
+
+        destroySurface(window.get().getSurfaceHandle());
+        createWindowSurface(window.get());
     }
 }

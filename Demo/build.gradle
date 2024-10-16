@@ -24,7 +24,7 @@ test {
 
 task runHelloWorld(type: JavaExec, dependsOn: compileJava){
     javaLauncher = javaToolchains.launcherFor {
-        languageVersion = JavaLanguageVersion.of(18)
+        languageVersion = JavaLanguageVersion.of(21)
     }
 
     classpath = sourceSets.main.runtimeClasspath

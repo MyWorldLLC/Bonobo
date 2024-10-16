@@ -216,7 +216,7 @@ public class Surface implements AutoCloseable {
                         .pNext(0)
                         .image(swapchainImages[i])
                         .viewType(VK_IMAGE_VIEW_TYPE_2D)
-                        .format(surfaceFormat)
+                        .format(swapchainImageFormat)
                         .components(c -> c.r(VK_COMPONENT_SWIZZLE_IDENTITY)
                                 .b(VK_COMPONENT_SWIZZLE_IDENTITY)
                                 .g(VK_COMPONENT_SWIZZLE_IDENTITY)
