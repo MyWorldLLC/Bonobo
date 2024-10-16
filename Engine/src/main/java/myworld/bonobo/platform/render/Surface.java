@@ -61,6 +61,13 @@ public class Surface implements AutoCloseable {
     protected long renderPass;
     protected long pipelineLayout;
     protected long graphicsPipeline;
+    protected long[] swapchainFramebuffers;
+    protected long commandPool;
+    protected VkCommandBuffer commandBuffer;
+
+    protected long imageAvailableSemaphore;
+    protected long renderFinishedSemaphore;
+    protected long inFlightFence;
 
     public Surface(long handle, Window window, PhysicalDevice gpu, RenderingDevice device, int queueFamilyIndex){
         this.handle = handle;
@@ -272,10 +279,20 @@ public class Surface implements AutoCloseable {
             subpass.colorAttachmentCount(1);
             subpass.pColorAttachments(colorAttachmentRefs);
 
+            var dependencies = VkSubpassDependency.calloc(1, stack);
+            var dependency = dependencies.get(0);
+            dependency.srcSubpass(VK_SUBPASS_EXTERNAL);
+            dependency.dstSubpass(0);
+            dependency.srcStageMask(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+            dependency.srcAccessMask(0);
+            dependency.dstStageMask(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+            dependency.dstAccessMask(VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
+
             var renderPassInfo = VkRenderPassCreateInfo.calloc(stack);
             renderPassInfo.sType$Default();
             renderPassInfo.pAttachments(colorAttachments);
             renderPassInfo.pSubpasses(subpasses);
+            renderPassInfo.pDependencies(dependencies);
 
             var pRenderPass = stack.callocLong(1);
             check(vkCreateRenderPass(device.getDevice(), renderPassInfo, null, pRenderPass));
@@ -418,10 +435,181 @@ public class Surface implements AutoCloseable {
             var pGraphicsPipeline = stack.callocLong(1);
             check(vkCreateGraphicsPipelines(device.getDevice(), VK_NULL_HANDLE, pipelineInfos, null, pGraphicsPipeline));
             graphicsPipeline = pGraphicsPipeline.get();
+
+            swapchainFramebuffers = new long[swapchainImageViews.length];
+            for(int i = 0; i < swapchainImageViews.length; i++){
+
+                var attachments = stack.callocLong(1);
+                attachments.put(0, swapchainImageViews[i]);
+
+                var framebufferInfo = VkFramebufferCreateInfo.calloc(stack);
+                framebufferInfo.sType$Default();
+                framebufferInfo.renderPass(renderPass);
+                framebufferInfo.attachmentCount(1);
+                framebufferInfo.pAttachments(attachments);
+                framebufferInfo.width(swapExtents.width());
+                framebufferInfo.height(swapExtents.height());
+                framebufferInfo.layers(1);
+
+                var pFramebuffer = stack.callocLong(1);
+                check(vkCreateFramebuffer(device.getDevice(), framebufferInfo, null, pFramebuffer));
+                swapchainFramebuffers[i] = pFramebuffer.get();
+
+            }
+
+            var queueFamilyIndex = gpu.getQueueFamilyIndex(VK_QUEUE_GRAPHICS_BIT);
+
+            var poolInfo = VkCommandPoolCreateInfo.calloc(stack);
+            poolInfo.sType$Default();
+            poolInfo.flags(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+            poolInfo.queueFamilyIndex(queueFamilyIndex);
+
+            var pCommandPool = stack.callocLong(1);
+            check(vkCreateCommandPool(device.getDevice(), poolInfo, null, pCommandPool));
+            commandPool = pCommandPool.get();
+
+            var allocInfo = VkCommandBufferAllocateInfo.calloc(stack);
+            allocInfo.sType$Default();
+            allocInfo.commandPool(commandPool);
+            allocInfo.level(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+            allocInfo.commandBufferCount(1);
+
+            var pCommandBuffer = stack.callocPointer(1);
+            check(vkAllocateCommandBuffers(device.getDevice(), allocInfo, pCommandBuffer));
+            commandBuffer = new VkCommandBuffer(pCommandBuffer.get(), device.getDevice());
+
+            var semaphoreInfo = VkSemaphoreCreateInfo.calloc(stack);
+            semaphoreInfo.sType$Default();
+
+            var fenceInfo = VkFenceCreateInfo.calloc(stack);
+            fenceInfo.sType$Default();
+            fenceInfo.flags(VK_FENCE_CREATE_SIGNALED_BIT);
+
+            var pSemaphore = stack.callocLong(1);
+            check(vkCreateSemaphore(device.getDevice(), semaphoreInfo, null, pSemaphore));
+            imageAvailableSemaphore = pSemaphore.get(0);
+
+            check(vkCreateSemaphore(device.getDevice(), semaphoreInfo, null, pSemaphore));
+            renderFinishedSemaphore = pSemaphore.get(0);
+
+            check(vkCreateFence(device.getDevice(), fenceInfo, null, pSemaphore));
+            inFlightFence = pSemaphore.get(0);
         }
 
         destroyShaderModule(vertShader);
         destroyShaderModule(fragShader);
+    }
+
+    public void recordCommandBuffer(int imageIndex){
+        var swapExtents = getSwapExtents();
+        try(var stack = MemoryStack.stackPush()){
+            vkResetCommandBuffer(commandBuffer, 0);
+
+            var beginInfo = VkCommandBufferBeginInfo.calloc(stack);
+            beginInfo.sType$Default();
+            beginInfo.flags(0);
+            beginInfo.pInheritanceInfo(null);
+
+            check(vkBeginCommandBuffer(commandBuffer, beginInfo));
+
+            var renderPassInfo = VkRenderPassBeginInfo.calloc(stack);
+            renderPassInfo.sType$Default();
+            renderPassInfo.renderPass(renderPass);
+            renderPassInfo.framebuffer(swapchainFramebuffers[imageIndex]);
+            renderPassInfo.renderArea().offset(off -> off.set(0, 0));
+            renderPassInfo.renderArea().extent(getSwapExtents());
+
+            var clearColors = VkClearValue.calloc(1, stack);
+            var clearColor = clearColors.get(0);
+            clearColor.color(color -> color.float32(0, 0f)
+                    .float32(1, 0f)
+                    .float32(2, 0f)
+                    .float32(3, 1f));
+
+            renderPassInfo.clearValueCount(1);
+            renderPassInfo.pClearValues(clearColors);
+
+            vkCmdBeginRenderPass(commandBuffer, renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+            vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+
+            var viewports = VkViewport.calloc(1, stack);
+            var viewport = viewports.get(0);
+            viewport.x(0f);
+            viewport.y(0f);
+            viewport.width(swapExtents.width());
+            viewport.height(swapExtents.height());
+            viewport.minDepth(0f);
+            viewport.maxDepth(1f);
+
+            vkCmdSetViewport(commandBuffer, 0, viewports);
+
+            var scissors = VkRect2D.calloc(1, stack);
+            var scissor = scissors.get(0);
+            scissor.offset(offset -> offset.set(0, 0));
+            scissor.extent(swapExtents);
+
+            vkCmdSetScissor(commandBuffer, 0, scissors);
+
+            vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+
+            vkCmdEndRenderPass(commandBuffer);
+
+            check(vkEndCommandBuffer(commandBuffer));
+        }
+
+    }
+
+    public void drawFrame(){
+
+        try(var stack = MemoryStack.stackPush()){
+            vkWaitForFences(device.getDevice(), inFlightFence, true, Long.MAX_VALUE);
+            vkResetFences(device.getDevice(), inFlightFence);
+
+            var pImageIndex = stack.callocInt(1);
+            vkAcquireNextImageKHR(device.getDevice(), swapchainHandle, Long.MAX_VALUE, imageAvailableSemaphore, VK_NULL_HANDLE, pImageIndex);
+            recordCommandBuffer(pImageIndex.get(0));
+
+            var submitInfo = VkSubmitInfo.calloc(stack);
+            submitInfo.sType$Default();
+
+            var waitSemaphores = stack.callocLong(1);
+            waitSemaphores.put(0, imageAvailableSemaphore);
+
+            var waitStages = stack.callocInt(1);
+            waitStages.put(0, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+
+            submitInfo.waitSemaphoreCount(1);
+            submitInfo.pWaitSemaphores(waitSemaphores);
+            submitInfo.pWaitDstStageMask(waitStages);
+
+            var commandBuffers = stack.callocPointer(1);
+            commandBuffers.put(0, commandBuffer.address());
+            submitInfo.pCommandBuffers(commandBuffers);
+
+            var signalSemaphores = stack.callocLong(1);
+            signalSemaphores.put(0, renderFinishedSemaphore);
+            submitInfo.signalSemaphoreCount();
+            submitInfo.pSignalSemaphores(signalSemaphores);
+
+            check(vkQueueSubmit(getQueue(), submitInfo, inFlightFence));
+
+            var presentInfo = VkPresentInfoKHR.calloc(stack);
+            presentInfo.sType$Default();
+
+            presentInfo.waitSemaphoreCount();
+            presentInfo.pWaitSemaphores(signalSemaphores);
+
+            var swapChains = stack.callocLong(1);
+            swapChains.put(0, swapchainHandle);
+            presentInfo.swapchainCount(1);
+            presentInfo.pSwapchains(swapChains);
+            presentInfo.pImageIndices(pImageIndex);
+            presentInfo.pResults(null);
+
+            vkQueuePresentKHR(getQueue(), presentInfo);
+        }
+
     }
 
     protected long createShaderModule(String resource){
@@ -462,12 +650,18 @@ public class Surface implements AutoCloseable {
     @Override
     public void close(){
 
+        vkDeviceWaitIdle(device.getDevice());
+
         for(int i = 0; i < swapchainImageViews.length; i++){
             vkDestroyImageView(device.getDevice(), swapchainImageViews[i], null);
         }
 
         if(swapchainHandle != VK_NULL_HANDLE){
             vkDestroySwapchainKHR(device.getDevice(), swapchainHandle, null);
+        }
+
+        if(commandPool != VK_NULL_HANDLE){
+            vkDestroyCommandPool(device.getDevice(), commandPool, null);
         }
 
         if(graphicsPipeline != VK_NULL_HANDLE){
@@ -481,6 +675,14 @@ public class Surface implements AutoCloseable {
         if(renderPass != VK_NULL_HANDLE){
             vkDestroyRenderPass(device.getDevice(), renderPass, null);
         }
+
+        for(var framebuffer : swapchainFramebuffers){
+            vkDestroyFramebuffer(device.getDevice(), framebuffer, null);
+        }
+
+        vkDestroySemaphore(device.getDevice(), imageAvailableSemaphore, null);
+        vkDestroySemaphore(device.getDevice(), renderFinishedSemaphore, null);
+        vkDestroyFence(device.getDevice(), inFlightFence, null);
 
         VkUtil.freeAll(
                 formats,

@@ -124,6 +124,16 @@ public class PhysicalDevice implements AutoCloseable {
         return supports;
     }
 
+    public int getQueueFamilyIndex(int flags){
+        var props = getQueueFamilyProperties();
+        for(int i = 0; i < props.capacity(); i++){
+            if((props.get(i).queueFlags() & flags) != 0){
+                return i;
+            }
+        }
+        return -1;
+    }
+
     public VkPhysicalDeviceMemoryProperties getMemoryProperties(){
         if(memoryProperties == null){
             memoryProperties = VkPhysicalDeviceMemoryProperties.calloc();

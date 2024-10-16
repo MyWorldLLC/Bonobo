@@ -184,6 +184,7 @@ public class GlfwVulkanPlatform extends AppSystem implements PlatformSystem {
     @Override
     public void update(double tpf){
         glfwPollEvents();
+        surfaces.forEach(Surface::drawFrame);
         windows.getWindows().removeIf(this::closeIfRequested);
         if(windows.getWindows().isEmpty()){
             log.info("All windows closed, exiting");
