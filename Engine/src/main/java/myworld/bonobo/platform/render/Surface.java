@@ -18,8 +18,11 @@ package myworld.bonobo.platform.render;
 
 import myworld.bonobo.math.BMath;
 import myworld.bonobo.platform.windowing.Window;
+import myworld.bonobo.util.log.Logger;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.*;
+
+import java.io.IOException;
 
 import static myworld.bonobo.platform.render.VkUtil.check;
 import static myworld.bonobo.platform.render.VkUtil.firstMatch;
@@ -29,6 +32,8 @@ import static org.lwjgl.vulkan.KHRSwapchain.*;
 import static org.lwjgl.vulkan.VK10.*;
 
 public class Surface implements AutoCloseable {
+
+    private static final Logger log = Logger.loggerFor(Surface.class);
 
     protected final long handle;
     protected final Window window;
@@ -52,6 +57,10 @@ public class Surface implements AutoCloseable {
     protected long[] swapchainImageViews;
 
     protected int swapchainImageFormat;
+
+    protected long renderPass;
+    protected long pipelineLayout;
+    protected long graphicsPipeline;
 
     public Surface(long handle, Window window, PhysicalDevice gpu, RenderingDevice device, int queueFamilyIndex){
         this.handle = handle;
@@ -166,7 +175,7 @@ public class Surface implements AutoCloseable {
 
     protected void createSwapChain(){
         var capabilities = getCapabilities();
-        int imageCount = Math.min(capabilities.minImageCount() + 1, capabilities.maxImageCount());
+        int imageCount = capabilities.minImageCount() + 1;
 
         long oldSwapchain = swapchainHandle;
 
@@ -237,6 +246,219 @@ public class Surface implements AutoCloseable {
         }
     }
 
+    protected void createRenderPass(){
+
+        try(var stack = MemoryStack.stackPush()){
+
+            var colorAttachments = VkAttachmentDescription.calloc(1, stack);
+            var colorAttachment = colorAttachments.get(0);
+            colorAttachment.format(swapchainImageFormat);
+            colorAttachment.samples(VK_SAMPLE_COUNT_1_BIT);
+            colorAttachment.loadOp(VK_ATTACHMENT_LOAD_OP_CLEAR);
+            colorAttachment.storeOp(VK_ATTACHMENT_STORE_OP_STORE);
+            colorAttachment.stencilLoadOp(VK_ATTACHMENT_LOAD_OP_DONT_CARE);
+            colorAttachment.stencilStoreOp(VK_ATTACHMENT_STORE_OP_DONT_CARE);
+            colorAttachment.initialLayout(VK_IMAGE_LAYOUT_UNDEFINED);
+            colorAttachment.finalLayout(VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+
+            var colorAttachmentRefs = VkAttachmentReference.calloc(1, stack);
+            var colorAttachmentRef = colorAttachmentRefs.get(0);
+            colorAttachmentRef.attachment(0);
+            colorAttachmentRef.layout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
+            var subpasses = VkSubpassDescription.calloc(1, stack);
+            var subpass = subpasses.get(0);
+            subpass.pipelineBindPoint(VK_PIPELINE_BIND_POINT_GRAPHICS);
+            subpass.colorAttachmentCount(1);
+            subpass.pColorAttachments(colorAttachmentRefs);
+
+            var renderPassInfo = VkRenderPassCreateInfo.calloc(stack);
+            renderPassInfo.sType$Default();
+            renderPassInfo.pAttachments(colorAttachments);
+            renderPassInfo.pSubpasses(subpasses);
+
+            var pRenderPass = stack.callocLong(1);
+            check(vkCreateRenderPass(device.getDevice(), renderPassInfo, null, pRenderPass));
+            renderPass = pRenderPass.get();
+        }
+    }
+
+    protected void createGraphicsPipeline(){
+
+        var vertShader = createShaderModule("/vert.spv");
+        var fragShader = createShaderModule("/frag.spv");
+
+        try(var stack = MemoryStack.stackPush()){
+
+            var shaderStages = VkPipelineShaderStageCreateInfo.calloc(2, stack);
+            var vertShaderStageInfo = shaderStages.get(0);
+            vertShaderStageInfo.sType$Default();
+            vertShaderStageInfo.stage(VK_SHADER_STAGE_VERTEX_BIT);
+            vertShaderStageInfo.module(vertShader);
+            vertShaderStageInfo.pName(stack.ASCII("main"));
+
+            var fragShaderStageInfo = shaderStages.get(1);
+            fragShaderStageInfo.sType$Default();
+            fragShaderStageInfo.stage(VK_SHADER_STAGE_FRAGMENT_BIT);
+            fragShaderStageInfo.module(fragShader);
+            fragShaderStageInfo.pName(stack.ASCII("main"));
+
+            var dynamicStates = new int[]{VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
+
+            var dynamicState = VkPipelineDynamicStateCreateInfo.calloc(stack);
+            dynamicState.sType$Default();
+            dynamicState.pDynamicStates(stack.ints(dynamicStates));
+
+            var vertexInputInfo = VkPipelineVertexInputStateCreateInfo.calloc(stack);
+            vertexInputInfo.sType$Default();
+            vertexInputInfo.pVertexBindingDescriptions(null);
+            vertexInputInfo.pVertexAttributeDescriptions(null);
+
+            var inputAssembly = VkPipelineInputAssemblyStateCreateInfo.calloc(stack);
+            inputAssembly.sType$Default();
+            inputAssembly.topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+            inputAssembly.primitiveRestartEnable(false);
+
+            var swapExtents = getSwapExtents();
+            var viewport = VkViewport.calloc(stack);
+            viewport.x(0f);
+            viewport.y(0f);
+            viewport.width(swapExtents.width());
+            viewport.height(swapExtents.height());
+            viewport.minDepth(0f);
+            viewport.maxDepth(1f);
+
+            var scissor = VkRect2D.calloc(stack);
+            scissor.offset().set(0, 0);
+            scissor.extent().set(swapExtents);
+
+            var viewportState = VkPipelineViewportStateCreateInfo.calloc(stack);
+            viewportState.sType$Default();
+            viewportState.viewportCount(1);
+            viewportState.scissorCount(1);
+
+            var rasterizer = VkPipelineRasterizationStateCreateInfo.calloc(stack);
+            rasterizer.sType$Default();
+            rasterizer.depthClampEnable(false);
+            rasterizer.rasterizerDiscardEnable(false);
+            rasterizer.polygonMode(VK_POLYGON_MODE_FILL);
+            rasterizer.lineWidth(1.0f);
+            rasterizer.cullMode(VK_CULL_MODE_BACK_BIT);
+            rasterizer.frontFace(VK_FRONT_FACE_CLOCKWISE);
+            rasterizer.depthBiasEnable(false);
+            rasterizer.depthBiasConstantFactor(0f);
+            rasterizer.depthBiasClamp(0f);
+            rasterizer.depthBiasSlopeFactor(0f);
+
+            var multisampling = VkPipelineMultisampleStateCreateInfo.calloc(stack);
+            multisampling.sType$Default();
+            multisampling.sampleShadingEnable(false);
+            multisampling.rasterizationSamples(VK_SAMPLE_COUNT_1_BIT);
+            multisampling.minSampleShading(1f);
+            multisampling.pSampleMask(null);
+            multisampling.alphaToCoverageEnable(false);
+            multisampling.alphaToOneEnable(false);
+
+            var colorBlendAttachments = VkPipelineColorBlendAttachmentState.calloc(1, stack);
+
+            var colorBlendAttachment = colorBlendAttachments.get(0);
+            colorBlendAttachment.colorWriteMask(
+                    VK_COLOR_COMPONENT_R_BIT |
+                          VK_COLOR_COMPONENT_G_BIT |
+                          VK_COLOR_COMPONENT_B_BIT |
+                          VK_COLOR_COMPONENT_A_BIT
+            );
+            colorBlendAttachment.blendEnable(false);
+            colorBlendAttachment.srcColorBlendFactor(VK_BLEND_FACTOR_ONE);
+            colorBlendAttachment.dstColorBlendFactor(VK_BLEND_FACTOR_ZERO);
+            colorBlendAttachment.colorBlendOp(VK_BLEND_OP_ADD);
+            colorBlendAttachment.srcAlphaBlendFactor(VK_BLEND_FACTOR_ONE);
+            colorBlendAttachment.dstAlphaBlendFactor(VK_BLEND_FACTOR_ZERO);
+            colorBlendAttachment.alphaBlendOp(VK_BLEND_OP_ADD);
+
+            var colorBlending = VkPipelineColorBlendStateCreateInfo.calloc(stack);
+            colorBlending.sType$Default();
+            colorBlending.logicOpEnable(false);
+            colorBlending.logicOp(VK_LOGIC_OP_COPY);
+            colorBlending.pAttachments(colorBlendAttachments);
+            colorBlending.blendConstants(stack.floats(
+                    0f,
+                    0f,
+                    0f,
+                    0f
+            ));
+
+            var pipelineLayoutInfo = VkPipelineLayoutCreateInfo.calloc(stack);
+            pipelineLayoutInfo.sType$Default();
+            pipelineLayoutInfo.pSetLayouts(null);
+            pipelineLayoutInfo.pPushConstantRanges(null);
+
+            var pPipelineLayout = stack.callocLong(1);
+            check(vkCreatePipelineLayout(device.getDevice(), pipelineLayoutInfo, null, pPipelineLayout));
+            pipelineLayout = pPipelineLayout.get();
+
+            var pipelineInfos = VkGraphicsPipelineCreateInfo.calloc(1, stack);
+            var pipelineInfo = pipelineInfos.get(0);
+            pipelineInfo.sType$Default();
+            pipelineInfo.pStages(shaderStages);
+            pipelineInfo.pVertexInputState(vertexInputInfo);
+            pipelineInfo.pInputAssemblyState(inputAssembly);
+            pipelineInfo.pViewportState(viewportState);
+            pipelineInfo.pRasterizationState(rasterizer);
+            pipelineInfo.pMultisampleState(multisampling);
+            pipelineInfo.pDepthStencilState(null);
+            pipelineInfo.pColorBlendState(colorBlending);
+            pipelineInfo.pDynamicState(dynamicState);
+            pipelineInfo.layout(pipelineLayout);
+            pipelineInfo.renderPass(renderPass);
+            pipelineInfo.subpass(0);
+            pipelineInfo.basePipelineHandle(VK_NULL_HANDLE);
+            pipelineInfo.basePipelineIndex(-1);
+
+            var pGraphicsPipeline = stack.callocLong(1);
+            check(vkCreateGraphicsPipelines(device.getDevice(), VK_NULL_HANDLE, pipelineInfos, null, pGraphicsPipeline));
+            graphicsPipeline = pGraphicsPipeline.get();
+        }
+
+        destroyShaderModule(vertShader);
+        destroyShaderModule(fragShader);
+    }
+
+    protected long createShaderModule(String resource){
+
+        try(var code = getClass().getResourceAsStream(resource)){
+            if(code == null){
+                log.error("No such resource: %s", resource);
+                return 0;
+            }
+
+            var codeBytes = code.readAllBytes();
+
+            try(var stack = MemoryStack.stackPush()){
+
+                var codeBuf = stack.bytes(codeBytes);
+
+                var createInfo = VkShaderModuleCreateInfo.calloc(stack);
+                createInfo.sType$Default();
+                createInfo.pNext(0);
+                createInfo.pCode(codeBuf);
+
+                var moduleHandle = stack.callocLong(1);
+                check(vkCreateShaderModule(device.getDevice(), createInfo, null, moduleHandle));
+                return moduleHandle.get();
+            }
+        }catch(IOException e){
+            log.error("Failed to load shader %s: %s", resource, e.getMessage());
+            return 0;
+        }
+    }
+
+    protected void destroyShaderModule(long shaderModule){
+        if(shaderModule != 0){
+            vkDestroyShaderModule(device.getDevice(), shaderModule, null);
+        }
+    }
+
     @Override
     public void close(){
 
@@ -246,6 +468,18 @@ public class Surface implements AutoCloseable {
 
         if(swapchainHandle != VK_NULL_HANDLE){
             vkDestroySwapchainKHR(device.getDevice(), swapchainHandle, null);
+        }
+
+        if(graphicsPipeline != VK_NULL_HANDLE){
+            vkDestroyPipeline(device.getDevice(), graphicsPipeline, null);
+        }
+
+        if(pipelineLayout != VK_NULL_HANDLE){
+            vkDestroyPipelineLayout(device.getDevice(), pipelineLayout, null);
+        }
+
+        if(renderPass != VK_NULL_HANDLE){
+            vkDestroyRenderPass(device.getDevice(), renderPass, null);
         }
 
         VkUtil.freeAll(

@@ -153,6 +153,9 @@ public class GlfwVulkanPlatform extends AppSystem implements PlatformSystem {
             var device = RenderingDevice.create(gpu, queueFamilyIndex);
             var surface = new Surface(surfaceHandle.get(0), window, gpu, device, queueFamilyIndex);
             surface.createSwapChain();
+            surface.createRenderPass();
+            surface.createGraphicsPipeline();
+            System.out.println("Surface created");
 
             surfaces.add(surface);
 
