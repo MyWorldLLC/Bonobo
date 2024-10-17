@@ -17,6 +17,7 @@
 package myworld.bonobo.platform.render;
 
 import myworld.bonobo.math.BMath;
+import myworld.bonobo.math.Color;
 import myworld.bonobo.platform.windowing.Window;
 import myworld.bonobo.util.log.Logger;
 import org.lwjgl.system.MemoryStack;
@@ -69,6 +70,8 @@ public class Surface implements AutoCloseable {
     protected long renderFinishedSemaphore;
     protected long inFlightFence;
 
+    protected Color backgroundColor;
+
     public Surface(long handle, Window window, PhysicalDevice gpu, RenderingDevice device, int queueFamilyIndex){
         this.handle = handle;
         this.window = window;
@@ -76,6 +79,7 @@ public class Surface implements AutoCloseable {
         this.device = device;
         this.queueFamilyIndex = queueFamilyIndex;
         swapchainHandle = VK_NULL_HANDLE;
+        backgroundColor = Color.DARK_GREY;
     }
 
     public long getHandle() {
@@ -96,6 +100,14 @@ public class Surface implements AutoCloseable {
 
     public int getQueueFamilyIndex() {
         return queueFamilyIndex;
+    }
+
+    public Color getBackgroundColor() {
+        return backgroundColor;
+    }
+
+    public void setBackgroundColor(Color backgroundColor) {
+        this.backgroundColor = backgroundColor;
     }
 
     public VkQueue getQueue(){
@@ -521,10 +533,10 @@ public class Surface implements AutoCloseable {
 
             var clearColors = VkClearValue.calloc(1, stack);
             var clearColor = clearColors.get(0);
-            clearColor.color(color -> color.float32(0, 0f)
-                    .float32(1, 0f)
-                    .float32(2, 0f)
-                    .float32(3, 1f));
+            clearColor.color(color -> color.float32(0, backgroundColor.r())
+                    .float32(1, backgroundColor.g())
+                    .float32(2, backgroundColor.b())
+                    .float32(3, backgroundColor.a()));
 
             renderPassInfo.clearValueCount(1);
             renderPassInfo.pClearValues(clearColors);

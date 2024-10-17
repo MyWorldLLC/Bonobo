@@ -155,7 +155,6 @@ public class GlfwVulkanPlatform extends AppSystem implements PlatformSystem {
             surface.createSwapChain();
             surface.createRenderPass();
             surface.createGraphicsPipeline();
-            System.out.println("Surface created");
 
             surfaces.add(surface);
 
